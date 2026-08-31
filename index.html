@@ -3,11 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Read Fast</title>
 <meta name="description" content="Read Fast — a private, in-browser speed reader. Add a book, read one word at a time.">
 <meta name="theme-color" content="#0C0E12">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Read Fast">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Read Fast">
+<meta property="og:description" content="Read Fast — a private, in-browser speed reader. Add a book, read one word at a time.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230C0E12'/%3E%3Cpath d='M18 5L8 19h7l-1 9 10-14h-7z' fill='%23F5B331'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230C0E12'/%3E%3Cpath d='M18 5L8 19h7l-1 9 10-14h-7z' fill='%23F5B331'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
 <style>
   :root { color-scheme: dark; }
   html, body { margin: 0; padding: 0; background: #0C0E12; color: #F3F4F6; }
@@ -16,11 +24,9 @@
 </style>
 </head>
 <body>
-<title>Read Fast</title>
-<script>window.BUILD={v:'v9',date:'31 August 2026'};</script>
+<script>window.BUILD={v:'v10',date:'31 August 2026'};</script>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+
 <style>
   :root {
     --bg: #0C0E12;
@@ -1819,7 +1825,23 @@
   // holding every book's metadata and its text (words joined by spaces, which
   // round-trips exactly because tokenising splits on whitespace).
   var BACKUP_FORMAT = 'read-fast-library';
-  var downloadsApi = null;
+  var downloadsApi = null;                                    // artifact viewer only
+  var inArtifactViewer = !!(window.claude && typeof window.claude.use === 'function');
+  function canSaveNatively() {
+    try { return typeof Blob === 'function' && 'download' in document.createElement('a'); }
+    catch (e) { return false; }
+  }
+  function saveNatively(filename, text) {
+    var url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    var a = document.createElement('a');
+    a.href = url; a.download = filename; a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      if (a.parentNode) a.parentNode.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 2000);
+  }
   function fmtBytes(n) {
     if (n < 1024) return n + ' B';
     if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
@@ -1840,21 +1862,25 @@
     });
   }
   function backupLibrary() {
-    if (!downloadsApi) return;
     if (!allBooks.length) { toast('').done('There are no books to back up yet.'); return; }
     var t = toast('Preparing your backup…');
     buildBackup().then(function (data) {
       var json = JSON.stringify(data);
       var name = 'read-fast-library-' + new Date().toISOString().slice(0, 10) + '.json';
-      return downloadsApi.save({ filename: name, data: json }).then(function () {
+      var ok = function () {
         t.done('Backed up ' + data.books.length + (data.books.length === 1 ? ' book' : ' books') + ' (' + fmtBytes(json.length) + ')');
-      }, function (err) {
-        var code = err && err.code;
-        if (code === 'declined') t.done('Backup cancelled.');
-        else if (code === 'too_large') t.error('This library is too big for one backup file (the limit is 16 MB). Remove a book or two, or back up in stages.');
-        else if (code === 'rate_limited') t.error('Another save is already open. Finish that one, then try again.');
-        else t.error('The backup couldn’t be saved.');
-      });
+      };
+      if (downloadsApi) {
+        return downloadsApi.save({ filename: name, data: json }).then(ok, function (err) {
+          var code = err && err.code;
+          if (code === 'declined') t.done('Backup cancelled.');
+          else if (code === 'too_large') t.error('This library is too big for one backup file (the limit is 16 MB). Remove a book or two, or back up in stages.');
+          else if (code === 'rate_limited') t.error('Another save is already open. Finish that one, then try again.');
+          else t.error('The backup couldn’t be saved.');
+        });
+      }
+      saveNatively(name, json);
+      ok();
     }).catch(function () { t.error('The backup couldn’t be built.'); });
   }
   function restoreLibrary(lib, t) {
@@ -2176,7 +2202,7 @@
       var anyVirtual = books.some(function (b) { return !b.realPages; });
       el.footnote.textContent = 'Books live in this browser only — nothing is uploaded anywhere, so back up if you rely on them.' +
         (anyVirtual ? ' *EPUB, DOCX and text files have no fixed pages, so a page here is ' + WORDS_PER_VIRTUAL_PAGE + ' words.' : '') +
-        ' · Read Fast ' + window.BUILD.v + ' · ' + window.BUILD.date;
+        (window.BUILD ? ' · Read Fast ' + window.BUILD.v + ' · ' + window.BUILD.date : '');
     });
   }
 
@@ -2614,14 +2640,18 @@
   el.backupBtn.addEventListener('click', backupLibrary);
   el.restoreBtn.addEventListener('click', function () { el.restoreInput.click(); });
   el.restoreInput.addEventListener('change', function () { importFiles(el.restoreInput.files); el.restoreInput.value = ''; });
-  // The save affordance only appears where the viewer can actually accept a file.
+  // The save affordance only appears where a file can actually be handed over:
+  // on a normal web page that is a plain download; inside the artifact viewer,
+  // downloads are sandboxed away and the platform capability does it instead.
   try {
-    if (window.claude && typeof window.claude.use === 'function') {
+    if (inArtifactViewer) {
       window.claude.use('downloads').then(function (api) {
         if (!api) return;
         downloadsApi = api;
         el.backupBtn.classList.remove('hidden');
       }, function () {});
+    } else if (canSaveNatively()) {
+      el.backupBtn.classList.remove('hidden');
     }
   } catch (e) {}
   el.brand.addEventListener('click', function (e) { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
@@ -2714,7 +2744,6 @@
   renderLibrary();
 })();
 </script>
-
 
 </body>
 </html>
