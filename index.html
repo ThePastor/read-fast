@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Read Fast</title>
 <meta name="description" content="Read Fast — a private, in-browser speed reader. Add a book, read one word at a time.">
+<meta name="author" content="JohnsonXCorp">
 <meta name="theme-color" content="#0C0E12">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -24,7 +25,7 @@
 </style>
 </head>
 <body>
-<script>window.BUILD={v:'v10',date:'31 August 2026'};</script>
+<script>window.BUILD={v:'v11',date:'1 September 2026'};</script>
 
 
 <style>
@@ -448,6 +449,39 @@
   .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
   .btn.danger { background: var(--danger); color: #fff; }
   .btn.danger:hover { filter: brightness(1.08); }
+
+  /* Developer credit. The app's own mark is a filled amber bolt in a rounded
+     square; this one is an outlined hexagon, so the two never read as the same
+     badge at a glance. The amber X lives in the mark only — repeating it in the
+     wordmark put two X's side by side. */
+  .credit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    margin-top: 26px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    color: var(--dim);
+    font-size: 12.5px;
+  }
+  .credit-by { letter-spacing: 0.02em; }
+  .jx {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--muted);
+    transition: color 140ms ease;
+  }
+  .jx:hover { color: var(--ink); }
+  .jx-mark { width: 20px; height: 20px; flex: none; }
+  .jx-name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.015em;
+    white-space: nowrap;
+  }
 
   /* Toasts (import progress) */
   .toasts {
@@ -965,6 +999,17 @@
         <input type="file" id="restore-input" class="hidden" accept=".json,application/json">
       </div>
     </div>
+
+    <footer class="credit">
+      <span class="credit-by">Built by</span>
+      <span class="jx" role="img" aria-label="JohnsonXCorp">
+        <svg class="jx-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+          <path d="M16 2.4 26.8 8.7v12.6L16 27.6 5.2 21.3V8.7z" fill="none" stroke="currentColor" stroke-width="1.7" opacity="0.5"/>
+          <path d="M11.4 11.4 L20.6 20.6 M20.6 11.4 L11.4 20.6" fill="none" stroke="var(--accent)" stroke-width="3.1" stroke-linecap="round"/>
+        </svg>
+        <span class="jx-name">JohnsonXCorp</span>
+      </span>
+    </footer>
   </main>
   <div class="toasts" id="toasts"></div>
 </div>
