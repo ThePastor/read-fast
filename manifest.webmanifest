@@ -1,0 +1,38 @@
+{
+  "name": "Read Fast",
+  "short_name": "Read Fast",
+  "description": "Read Fast \u2014 a private, in-browser speed reader. Add a book, read one word at a time.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0C0E12",
+  "theme_color": "#0C0E12",
+  "lang": "en",
+  "categories": [
+    "books",
+    "education",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

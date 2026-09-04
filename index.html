@@ -3,17 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Read Fast</title>
 <meta name="description" content="Read Fast — a private, in-browser speed reader. Add a book, read one word at a time.">
 <meta name="author" content="JohnsonXCorp">
 <meta name="theme-color" content="#0C0E12">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Read Fast">
-<meta property="og:description" content="Read Fast — a private, in-browser speed reader. Add a book, read one word at a time.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230C0E12'/%3E%3Cpath d='M18 5L8 19h7l-1 9 10-14h-7z' fill='%23F5B331'/%3E%3C/svg%3E">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230C0E12'/%3E%3Cpath d='M18 5L8 19h7l-1 9 10-14h-7z' fill='%23F5B331'/%3E%3C/svg%3E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Read Fast">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Read Fast">
+<meta property="og:description" content="Read Fast — a private, in-browser speed reader. Add a book, read one word at a time.">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230C0E12'/%3E%3Cpath d='M18 5L8 19h7l-1 9 10-14h-7z' fill='%23F5B331'/%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="48x48" href="./favicon.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
 <style>
   :root { color-scheme: dark; }
   html, body { margin: 0; padding: 0; background: #0C0E12; color: #F3F4F6; }
@@ -22,10 +27,9 @@
 </style>
 </head>
 <body>
-<title>Read Fast</title>
-<script>window.BUILD={v:'v14',date:'1 September 2026'};</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+<script>window.BUILD={v:'v15',date:'4 September 2026'};</script>
+
+
 <style>
   :root {
     --bg: #0C0E12;
@@ -172,7 +176,9 @@
   .search input::placeholder { color: var(--dim); }
   .search input:hover { background: var(--surface-3); }
   .search input:focus { background: var(--surface-3); border-color: var(--line-strong); outline: none; }
-  .topbar .right { display: flex; justify-content: flex-end; }
+  .topbar .right { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+  #install-btn { height: 40px; }
+  @media (max-width: 700px) { #install-btn .lbl { display: none; } #install-btn { padding: 0 12px; } }
 
   /* ---------- Library ---------- */
   #library { min-height: 100%; }
@@ -954,6 +960,7 @@
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-chev-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-chev-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-install" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="2.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5v6.5m0 0l-2.6-2.6M12 14l2.6-2.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-save" viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 17v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-restore" viewBox="0 0 24 24"><path d="M12 20V9m0 0L8 13m4-4l4 4M5 7V5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -970,6 +977,7 @@
       <input id="search" type="search" placeholder="Search your library" aria-label="Search your library" autocomplete="off">
     </div>
     <div class="right">
+      <button class="btn ghost tiny hidden" id="install-btn" type="button" title="Install Read Fast as an app"><svg><use href="#i-install"/></svg><span class="lbl">Install</span></button>
       <button class="btn primary" id="add-btn" type="button"><svg><use href="#i-plus"/></svg> Add book</button>
       <input type="file" id="file-input" class="hidden" accept=".pdf,.epub,.txt,.md,.docx,.zip,application/pdf,application/epub+zip,application/zip,text/plain" multiple>
     </div>
@@ -1168,6 +1176,7 @@
     library: $('library'), reader: $('reader'), hero: $('hero'), grid: $('grid'), noMatch: $('no-match'),
     shelfCount: $('shelf-count'), footnote: $('footnote'), manageBtn: $('manage-btn'), manageNote: $('manage-note'),
     backupBtn: $('backup-btn'), restoreBtn: $('restore-btn'), restoreInput: $('restore-input'),
+    installBtn: $('install-btn'),
     confirm: $('confirm'), confirmTitle: $('confirm-title'), confirmText: $('confirm-text'), confirmActions: $('confirm-actions'), toasts: $('toasts'), search: $('search'),
     addBtn: $('add-btn'), fileInput: $('file-input'), brand: $('brand'),
     backBtn: $('back-btn'), title: $('r-title'), pageChip: $('page-chip'), pageCur: $('page-cur'),
@@ -2672,6 +2681,88 @@
     });
   }
 
+  // ---------- Installing and staying offline ----------
+  // Only on a real origin: the artifact viewer has no origin of its own to
+  // register a worker against, and file:// cannot register one at all.
+  function canUseServiceWorker() {
+    if (inArtifactViewer || !('serviceWorker' in navigator)) return false;
+    return location.protocol === 'https:' ||
+      location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  }
+  function offerUpdate(worker) {
+    var t = toast('A new version of Read Fast is ready.');
+    var b = document.createElement('button');
+    b.className = 'btn primary tiny';
+    b.type = 'button';
+    b.textContent = 'Reload';
+    b.addEventListener('click', function () { worker.postMessage('SKIP_WAITING'); });
+    t.el.appendChild(b);
+  }
+  function initServiceWorker() {
+    if (!canUseServiceWorker()) return;
+    var reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (reloading) return;          // the new worker took over: pick it up once
+      reloading = true;
+      location.reload();
+    });
+    navigator.serviceWorker.register('./sw.js').then(function (reg) {
+      if (reg.waiting && navigator.serviceWorker.controller) offerUpdate(reg.waiting);
+      reg.addEventListener('updatefound', function () {
+        var nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', function () {
+          // controller present means this is an update, not the first install
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) offerUpdate(nw);
+        });
+      });
+    }).catch(function () {});
+  }
+
+  function isStandalone() {
+    try {
+      return window.navigator.standalone === true ||
+        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    } catch (e) { return false; }
+  }
+  function isIOS() {
+    var ua = navigator.userAgent || '';
+    // iPadOS reports as Mac, so a touch-capable "Mac" counts too
+    return /iPhone|iPad|iPod/.test(ua) ||
+      (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  }
+  var installPrompt = null;
+  function initInstall() {
+    if (inArtifactViewer || isStandalone()) return;
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();               // use our own button instead of the mini-infobar
+      installPrompt = e;
+      el.installBtn.classList.remove('hidden');
+    });
+    window.addEventListener('appinstalled', function () {
+      installPrompt = null;
+      el.installBtn.classList.add('hidden');
+    });
+    // Safari fires no install event, so the button explains the manual route.
+    if (isIOS()) el.installBtn.classList.remove('hidden');
+  }
+  el.installBtn.addEventListener('click', function () {
+    if (installPrompt) {
+      var p = installPrompt;
+      installPrompt = null;
+      p.prompt();
+      p.userChoice.then(function (r) {
+        if (r && r.outcome === 'accepted') el.installBtn.classList.add('hidden');
+        else installPrompt = p;
+      }).catch(function () { installPrompt = p; });
+      return;
+    }
+    askChoice('Add Read Fast to your home screen',
+      isIOS() ? 'In Safari, tap the Share button at the bottom of the screen, then choose “Add to Home Screen”. Read Fast then opens full-screen, and works without a connection.'
+              : 'Use your browser’s menu and choose “Install” or “Add to Home screen”. Read Fast then opens in its own window and works without a connection.',
+      [{ id: true, label: 'Got it', kind: 'primary' }], true);
+  });
+
   // ---------- Wiring ----------
   el.addBtn.addEventListener('click', function () { el.fileInput.click(); });
   el.manageBtn.addEventListener('click', function () { setManaging(!managing); });
@@ -2779,10 +2870,11 @@
   document.addEventListener('visibilitychange', function () { if (document.hidden) pause(); });
   window.addEventListener('beforeunload', function () { if (R.book) { R.book.pos = R.playing ? Math.max(0, R.idx - 1) : R.idx; store.putBook(R.book); } });
 
+  initServiceWorker();
+  initInstall();
   renderLibrary();
 })();
 </script>
-
 
 </body>
 </html>
