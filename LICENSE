@@ -1,0 +1,172 @@
+Read Fast — Proprietary Software Licence
+Copyright (c) 2026 JohnsonXCorp. All rights reserved.
+
+================================================================================
+1. OWNERSHIP
+================================================================================
+
+Read Fast, including its source code, build tooling, design, user interface,
+text, icons, wordmarks, and the arrangement and selection of all of the above
+(together, "the Software"), is the exclusive property of JohnsonXCorp.
+
+Copyright subsists in the Software from the moment it was written. No
+registration, filing or fee is required for that copyright to exist or to be
+enforceable in Canada, in the United States, or in any other country party to
+the Berne Convention.
+
+The Software is NOT open source. It is published in a public repository and
+served from a public web address so that people can USE it. Publication is not
+a grant of any right to copy it.
+
+================================================================================
+2. WHAT YOU MAY DO
+================================================================================
+
+You may:
+
+  (a) use Read Fast at https://thepastor.github.io/read-fast/ for your own
+      personal reading, free of charge;
+  (b) install it to your device's home screen and use it offline;
+  (c) read the source in your browser for the purpose of satisfying yourself
+      about what it does with your files (see TERMS.md — it sends them
+      nowhere);
+  (d) quote short excerpts for the purposes of criticism, review, news
+      reporting, private study, education, parody or satire, where a fair
+      dealing or fair use exception applies under your local law. This licence
+      does not attempt to remove rights the law gives you.
+
+================================================================================
+3. WHAT YOU MAY NOT DO
+================================================================================
+
+Except with prior written permission from JohnsonXCorp, you may not:
+
+  (a) copy, reproduce, or store the Software other than the ordinary browser
+      caching required to use it;
+  (b) modify, adapt, translate, or create derivative works from it;
+  (c) redistribute, publish, host, mirror, or make it available to others,
+      whether modified or not, and whether for a fee or free of charge;
+  (d) sell, license, sublicense, rent, or lease it;
+  (e) reverse engineer, decompile, or disassemble it, except to the extent
+      that this restriction is prohibited by applicable law;
+  (f) remove, obscure, or alter any copyright notice, licence banner, or
+      attribution contained in it — including the notice at the head of every
+      built file and the notice in the application footer;
+  (g) use its name, wordmarks, icons, or visual identity, or any confusingly
+      similar mark, in connection with any other product.
+
+Viewing this source in a browser, or receiving a copy of it because your
+browser downloaded one in order to run the application, does not grant you a
+licence to reuse it. A copy delivered to you for the purpose of execution is
+delivered for that purpose only.
+
+================================================================================
+4. GITHUB FORKING — AN HONEST NOTE
+================================================================================
+
+This matters, and pretending otherwise would make the rest of this document
+less credible rather than more.
+
+This repository is public on GitHub. By hosting it publicly, JohnsonXCorp has
+accepted GitHub's Terms of Service, section D.5 ("License Grant to Other
+Users"), which grants every GitHub user the right to VIEW and FORK this
+repository within GitHub. That grant is real, it takes precedence over this
+licence for that narrow purpose, and this licence does not and cannot revoke
+it.
+
+What that GitHub grant does NOT give anyone:
+
+  - any right to use the Software outside GitHub;
+  - any right to host, deploy, publish, or serve it anywhere;
+  - any right to modify it beyond what GitHub's own service requires;
+  - any right to distribute it off-platform;
+  - any right to remove the notices, or to claim authorship;
+  - any right to use it commercially.
+
+In GitHub's own words, absent any other licence, other users may only view and
+fork. Every other right named in section 3 above remains reserved. A fork that
+is deployed, redistributed, rebranded, or shipped is outside the GitHub grant
+and is an infringement of copyright.
+
+If you want more than GitHub's default grant, ask. Licensing enquiries:
+https://github.com/ThePastor/read-fast/issues
+
+================================================================================
+5. THIRD-PARTY COMPONENTS
+================================================================================
+
+Read Fast bundles third-party components that are NOT covered by this licence
+and remain the property of their respective authors. They are used under their
+own licences, which permit that use and require that their notices travel with
+every copy.
+
+Those components and their notices are listed in THIRD-PARTY-NOTICES.md, which
+forms part of the Software as distributed. Nothing in this licence restricts
+any right you have under those components' own licences with respect to those
+components.
+
+================================================================================
+6. YOUR CONTENT
+================================================================================
+
+Books, documents and files you open in Read Fast remain entirely yours.
+JohnsonXCorp claims no right, title or interest in them, receives no copy of
+them, and could not obtain one — they are processed in your browser and stored
+only in your browser. See TERMS.md.
+
+================================================================================
+7. NO WARRANTY
+================================================================================
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+Read Fast stores your library in your browser's local storage. Clearing your
+browser data, using private browsing, or reinstalling your browser will delete
+it. Use "Back up library" to keep a copy. JohnsonXCorp is not responsible for
+data lost from a browser it does not control.
+
+================================================================================
+8. LIMITATION OF LIABILITY
+================================================================================
+
+IN NO EVENT SHALL JOHNSONXCORP BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Some jurisdictions do not allow the exclusion of certain warranties or the
+limitation of certain liabilities. Where that is so, the exclusions and
+limitations above apply to the fullest extent permitted, and no further.
+
+================================================================================
+9. TERMINATION
+================================================================================
+
+The permissions in section 2 end automatically if you breach section 3. On
+termination you must stop using the Software and destroy any copies in your
+possession other than ordinary browser cache.
+
+================================================================================
+10. GOVERNING LAW
+================================================================================
+
+This licence is governed by the laws of the Province of British Columbia and
+the federal laws of Canada applicable therein, without regard to conflict of
+law principles. Copyright in the Software is additionally protected in every
+country party to the Berne Convention.
+
+================================================================================
+11. ENQUIRIES
+================================================================================
+
+To request permission for any use not granted above — commercial licensing,
+white-labelling, redistribution, or an educational exception — open an issue
+at https://github.com/ThePastor/read-fast/issues.
+
+--------------------------------------------------------------------------------
+This document is a licence, not legal advice, and was prepared without a
+lawyer. If you intend to enforce it against a specific party, or to license
+Read Fast commercially, have a lawyer qualified in your jurisdiction review it
+first.

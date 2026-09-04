@@ -1,7 +1,24 @@
 <!doctype html>
+<!--
+  Read Fast — a private, in-browser speed reader.
+  Copyright (c) 2026 JohnsonXCorp. All rights reserved.
+
+  PROPRIETARY. This is not open-source software. No permission is granted to
+  copy, modify, redistribute, host, sell or create derivative works from this
+  file or any part of it. Viewing this source in your browser is not a licence
+  to reuse it. See https://github.com/ThePastor/read-fast/blob/main/LICENSE
+
+  Bundled third-party components are used under their own licences and remain
+  the property of their authors — see https://github.com/ThePastor/read-fast/blob/main/THIRD-PARTY-NOTICES.md
+
+  Enquiries, including licensing: https://github.com/ThePastor/read-fast/issues
+-->
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="copyright" content="© 2026 JohnsonXCorp. All rights reserved.">
+<meta name="rights" content="Proprietary. All rights reserved. Not open source.">
+<link rel="license" href="https://github.com/ThePastor/read-fast/blob/main/LICENSE">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Read Fast</title>
 <meta name="description" content="Read Fast — a private, in-browser speed reader. Add a book, read one word at a time.">
@@ -27,7 +44,7 @@
 </style>
 </head>
 <body>
-<script>window.BUILD={v:'v15',date:'4 September 2026'};</script>
+<script>window.BUILD={v:'v16',date:'4 September 2026'};</script>
 
 
 <style>
@@ -459,16 +476,28 @@
      page in its own amber, so the two never read as the same badge. */
   .credit {
     display: flex;
-    align-items: baseline;
-    justify-content: center;
-    gap: 9px;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
     margin-top: 26px;
     padding-top: 20px;
     border-top: 1px solid var(--line);
     color: var(--dim);
     font-size: 12.5px;
   }
+  .credit-row { display: flex; align-items: baseline; gap: 9px; }
   .credit-by { letter-spacing: 0.02em; }
+  /* Ownership notice. Deliberately quiet — it is a legal marker, not a
+     design element, and the reader should never be aware of it. */
+  .credit-legal {
+    font-size: 11.5px;
+    color: var(--dim);
+    opacity: 0.72;
+    text-align: center;
+    text-wrap: balance;
+  }
+  .credit-legal a { color: inherit; text-underline-offset: 2px; }
+  .credit-legal a:hover { color: var(--muted); }
   /* The developer's wordmark is set in live text, not artwork — no image, no
      PNG, nothing to decode, and it stays crisp at any zoom or pixel density.
      Outfit 700 matches the supplied letterforms; the bracketed X keeps the
@@ -1008,8 +1037,16 @@
     </div>
 
     <footer class="credit">
-      <span class="credit-by">Built by</span>
-      <span class="jx-logo" role="img" aria-label="JohnsonXCorp">Johnson<span class="jx-x">[X]</span>Corp</span>
+      <div class="credit-row">
+        <span class="credit-by">Built by</span>
+        <span class="jx-logo" role="img" aria-label="JohnsonXCorp">Johnson<span class="jx-x">[X]</span>Corp</span>
+      </div>
+      <small class="credit-legal">
+        © 2026 JohnsonXCorp. All rights reserved. Read&nbsp;Fast is proprietary software, not open source —
+        <a href="https://github.com/ThePastor/read-fast/blob/main/LICENSE" target="_blank" rel="noopener">licence</a> ·
+        <a href="https://github.com/ThePastor/read-fast/blob/main/TERMS.md" target="_blank" rel="noopener">terms</a> ·
+        <a href="https://github.com/ThePastor/read-fast/blob/main/THIRD-PARTY-NOTICES.md" target="_blank" rel="noopener">notices</a>
+      </small>
     </footer>
   </main>
   <div class="toasts" id="toasts"></div>
