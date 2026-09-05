@@ -44,7 +44,7 @@
 </style>
 </head>
 <body>
-<script>window.BUILD={v:'v20',date:'5 September 2026'};</script>
+<script>window.BUILD={v:'v21',date:'5 September 2026'};</script>
 
 
 <style>
@@ -1199,9 +1199,7 @@
     </section>
     <p class="storage-warn urgent hidden" id="db-blocked">
       <svg aria-hidden="true"><use href="#i-warn"/></svg>
-      <span><b>Your library is still here.</b> Read Fast is open in another tab running an older
-      version, which is holding the old storage format open. Close the other Read&nbsp;Fast tabs,
-      then reload this one.
+      <span><b>Your library is still here.</b> <span id="db-blocked-why"></span>
       <button class="btn soft tiny" id="db-reload" type="button">Reload</button></span>
     </p>
     <p class="storage-warn hidden" id="storage-warn">
@@ -1398,6 +1396,7 @@
     shelfCount: $('shelf-count'), footnote: $('footnote'), manageBtn: $('manage-btn'), manageNote: $('manage-note'),
     backupBtn: $('backup-btn'), restoreBtn: $('restore-btn'), restoreInput: $('restore-input'),
     storageWarn: $('storage-warn'), dbBlocked: $('db-blocked'), dbReload: $('db-reload'),
+    dbWhy: $('db-blocked-why'),
     stats: $('stats'), stWords: $('st-words'), stTime: $('st-time'), stAvg: $('st-avg'),
     stBest: $('st-best'), stStreak: $('st-streak'), stSince: $('st-since'),
     stPlot: $('st-plot'), stFrom: $('st-from'), stTo: $('st-to'),
@@ -1423,10 +1422,27 @@
   // ---------- Storage (IndexedDB, with in-memory fallback) ----------
   var memBooks = {}, memText = {};
   var dbPromise = null;
-  var DB_BLOCKED = false;
+  // '' | 'blocked' | 'slow' | 'error' — why storage is unavailable, so the UI
+  // can say something true rather than showing a bare shelf.
+  var DB_TROUBLE = '';
+
   function openDB() {
     if (dbPromise) return dbPromise;
     dbPromise = new Promise(function (resolve) {
+      var settled = false, deadline;
+      function finish(db, why) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(deadline);
+        if (why) DB_TROUBLE = why;
+        resolve(db);
+      }
+      // A hung open is not hypothetical — observed on a real machine, on an
+      // origin hosting several apps across several tabs: indexedDB.open() fired
+      // NONE of success, error or blocked. Without a deadline renderLibrary()
+      // never resolves and the entire library screen stays blank, which is far
+      // worse than simply having no storage. Always give the UI an answer.
+      deadline = setTimeout(function () { finish(null, 'slow'); }, 5000);
       try {
         // v2 added 'days'. Every store is created conditionally, so an upgrade
         // from v1 adds the new one and leaves books and text untouched — an
@@ -1438,13 +1454,11 @@
           if (!db.objectStoreNames.contains('text')) db.createObjectStore('text', { keyPath: 'id' });
           if (!db.objectStoreNames.contains('days')) db.createObjectStore('days', { keyPath: 'day' });
         };
-        req.onsuccess = function () { resolve(req.result); };
-        req.onerror = function () { resolve(null); };
+        req.onsuccess = function () { finish(req.result); };
+        req.onerror = function () { finish(null, 'error'); };
         // Another tab still holds an older schema, so the upgrade cannot run.
-        // The app keeps working in memory — but the library will look EMPTY,
-        // which reads as data loss unless we say what actually happened.
-        req.onblocked = function () { DB_BLOCKED = true; resolve(null); };
-      } catch (e) { resolve(null); }
+        req.onblocked = function () { finish(null, 'blocked'); };
+      } catch (e) { finish(null, 'error'); }
     });
     return dbPromise;
   }
@@ -2726,7 +2740,16 @@
       allBooks = books;
       if (managing && !books.length) setManaging(false);
       el.manageBtn.classList.toggle('hidden', !books.length);
-      el.dbBlocked.classList.toggle('hidden', !DB_BLOCKED);
+      el.dbBlocked.classList.toggle('hidden', !DB_TROUBLE);
+      if (DB_TROUBLE) el.dbWhy.textContent =
+        DB_TROUBLE === 'blocked'
+          ? 'Read Fast is open in another tab running an older version, which is holding the old ' +
+            'storage format open. Close the other Read Fast tabs, then reload this one.'
+          : DB_TROUBLE === 'slow'
+            ? 'This browser’s storage stopped responding, so Read Fast can’t reach your books right ' +
+              'now. Closing other Read Fast tabs and reloading usually clears it.'
+            : 'This browser isn’t allowing Read Fast to use storage here — private browsing does ' +
+              'that. Your books are wherever you added them; anything added now will not be kept.';
       renderStats().then(function (sum) { if (sum) renderHeroEstimate(sum); });
       renderHero(books);
       renderGrid(books);
