@@ -44,7 +44,7 @@
 </style>
 </head>
 <body>
-<script>window.BUILD={v:'v17',date:'5 September 2026'};</script>
+<script>window.BUILD={v:'v18',date:'5 September 2026'};</script>
 
 
 <style>
@@ -581,6 +581,14 @@
     max-width: 52vw; margin: 0 auto;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+  /* Where you are in the book, not just which book. Dimmer than the title so
+     the header still reads as one thing rather than two competing lines. */
+  .reader-top .reader-chapter {
+    font-size: 12px;
+    color: var(--dim);
+    max-width: 52vw; margin: 2px auto 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .reader-top .right { display: flex; justify-content: flex-end; position: relative; }
   .page-chip {
     display: inline-flex; align-items: center; gap: 10px;
@@ -982,6 +990,7 @@
     .card .play-fab { opacity: 1; transform: none; width: 40px; height: 40px; }
     .reader-top { grid-template-columns: auto 1fr auto; padding: 10px 12px; }
     .reader-top .book-title { max-width: 100%; font-size: 13px; }
+    .reader-top .reader-chapter { max-width: 100%; font-size: 11px; }
     .page-chip .left { display: none; }
     .context, .stage-hint { display: none; }
     /* the touch hint is the only way these gestures are discoverable, so it stays */
@@ -1114,6 +1123,7 @@
     <div class="center">
       <div class="eyebrow">Now reading</div>
       <div class="book-title" id="r-title"></div>
+      <div class="reader-chapter hidden" id="r-chapter"></div>
     </div>
     <div class="right">
       <button class="page-chip num" id="page-chip" type="button" title="Jump to a page" aria-haspopup="true">
@@ -1182,7 +1192,7 @@
     <div class="player-row">
       <div class="speed">
         <button class="ctl" id="wpm-down" type="button" aria-label="Slower" title="Slower (↓)"><svg><use href="#i-minus"/></svg></button>
-        <div class="readout num"><b id="wpm-val">300</b><small>wpm</small></div>
+        <div class="readout num"><b id="wpm-val">300</b><small id="wpm-label">wpm</small></div>
         <button class="ctl" id="wpm-up" type="button" aria-label="Faster" title="Faster (↑)"><svg><use href="#i-plus"/></svg></button>
       </div>
       <div class="transport">
@@ -1272,7 +1282,8 @@
     track: $('track'), trackFill: $('track-fill'), trackKnob: $('track-knob'), scrubLeft: $('scrub-left'),
     restart: $('restart-btn'), skipBack: $('skip-back'), skipFwd: $('skip-fwd'),
     play: $('play-btn'), playIcon: $('play-icon'),
-    wpmDown: $('wpm-down'), wpmUp: $('wpm-up'), wpmVal: $('wpm-val'),
+    wpmDown: $('wpm-down'), wpmUp: $('wpm-up'), wpmVal: $('wpm-val'), wpmLabel: $('wpm-label'),
+    rChapter: $('r-chapter'),
     eta: $('eta'), presets: $('presets'), statusMain: $('status-main'), statusSub: $('status-sub'),
     minipage: $('minipage'), mpLabel: $('mp-label'), mpText: $('mp-text'),
     pagepop: $('pagepop'), ppPage: $('pp-page'), ppPrev: $('pp-prev'), ppNext: $('pp-next'),
@@ -2420,7 +2431,8 @@
   var settings = { wpm: 300 };
   try { var s = localStorage.getItem('readfast:wpm'); if (s) settings.wpm = clampWpm(parseInt(s, 10)); } catch (e) {}
 
-  var R = { book: null, words: [], idx: 0, playing: false, timer: null, lastSave: 0, rewindArmed: false };
+  var R = { book: null, words: [], idx: 0, playing: false, lastSave: 0, rewindArmed: false,
+            due: 0, raf: 0, rampStart: 0, pausedAt: 0, chapter: null };
 
   function clampWpm(v) { if (!isFinite(v)) return 300; return Math.max(MIN_WPM, Math.min(MAX_WPM, Math.round(v))); }
   function pageOf(starts, idx) {
@@ -2439,8 +2451,31 @@
     if (n <= 13) return 3;
     return 4;
   }
+  // ---------- Warm-up ----------
+  // Dropping straight into 400 wpm from cold is jarring — the eye needs a few
+  // seconds to lock onto the focal point. Ramp from 80% up to the chosen rate
+  // over 30 seconds, but only on a COLD start: ramping again every time someone
+  // pauses to think about a sentence would be its own irritation. The readout
+  // says WARMING while it runs, so a rate below the one you set never reads as
+  // a bug — which is the whole reason this is safe to do at all.
+  var RAMP_MS = 30000, RAMP_FLOOR = 0.8, RAMP_COLD_MS = 45000;
+
+  function nowMs() {
+    return (window.performance && performance.now) ? performance.now() : Date.now();
+  }
+  function armRamp() {
+    var t = nowMs();
+    R.rampStart = (!R.pausedAt || t - R.pausedAt > RAMP_COLD_MS) ? t : 0;
+  }
+  function currentWpm() {
+    if (!R.rampStart) return settings.wpm;
+    var t = (nowMs() - R.rampStart) / RAMP_MS;
+    if (t >= 1) { R.rampStart = 0; return settings.wpm; }
+    return settings.wpm * (RAMP_FLOOR + (1 - RAMP_FLOOR) * t);
+  }
+
   function delayFor(w) {
-    var d = 60000 / settings.wpm;
+    var d = 60000 / currentWpm();
     var n = w.length;
     if (n > 8) d *= 1.2;
     if (n > 13) d *= 1.2;
@@ -2462,6 +2497,8 @@
       el.title.textContent = book.title;
       el.jumpInput.max = book.pageStarts.length;
       MP.page = 0; MP.spans = []; MP.lit = null;
+      R.chapter = null;          // force the chapter line to redraw for this book
+      R.pausedAt = 0;            // a freshly opened book is always a cold start
       PV.open = false; el.pagepop.classList.add('hidden');
       el.library.classList.add('hidden');
       el.reader.classList.remove('hidden');
@@ -2540,6 +2577,10 @@
     el.statusMain.textContent = fmtNum(remaining) + ' words to go';
     el.statusSub.textContent = R.playing ? 'Reading' : (R.idx >= R.words.length ? 'Finished' : 'Paused');
     el.wpmVal.textContent = settings.wpm;
+    // The big number stays the rate you chose; only the unit label admits that
+    // the app has not reached it yet.
+    el.wpmLabel.textContent = (R.playing && R.rampStart) ? 'warming' : 'wpm';
+    updateReaderChapter();
     var chips = el.presets.children;
     for (var i = 0; i < chips.length; i++) chips[i].classList.toggle('on', parseInt(chips[i].dataset.wpm, 10) === settings.wpm);
     el.hint.classList.toggle('hidden', R.playing);
@@ -2610,6 +2651,23 @@
     el.ppClose.focus();
   }
   // ---- Chapters ----
+  // Which chapter is on screen. Cached against R.chapter so the DOM is only
+  // touched when the reading actually crosses a boundary.
+  function updateReaderChapter() {
+    var ch = R.book && R.book.chapters;
+    if (!ch || !ch.length) {
+      if (R.chapter !== -2) { R.chapter = -2; el.rChapter.classList.add('hidden'); el.rChapter.textContent = ''; }
+      return;
+    }
+    var i = chapterIndexAt(Math.min(R.idx, R.words.length - 1));
+    if (i === R.chapter) return;
+    R.chapter = i;
+    var name = i >= 0 ? ch[i].title : 'Before the first chapter';
+    el.rChapter.textContent = name;
+    el.rChapter.title = name;
+    el.rChapter.classList.remove('hidden');
+  }
+
   function chapterIndexAt(idx) {
     var ch = R.book && R.book.chapters;
     if (!ch || !ch.length) return -1;
@@ -2768,8 +2826,18 @@
     try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) { wakeLock = null; }
   }
 
-  function tick() {
-    if (!R.playing) return;
+  // ---------- The clock ----------
+  // The pace has to be honest across a whole session, not just per word.
+  // setTimeout(tick, d) re-based the clock on every word, so each timer's own
+  // lateness — 4-8 ms, and far more under load — was added to the next word
+  // instead of being corrected. At 800 wpm the interval is only 75 ms, so that
+  // compounds into a several-percent tax on a rate the reader chose on purpose.
+  //
+  // Each word is now due at an absolute time. A late frame is absorbed by the
+  // next one, so error never accumulates.
+  var CATCHUP = 4;          // words' worth of debt before we resync instead of racing
+
+  function advance(now) {
     if (R.idx >= R.words.length) { finish(); return; }
     var w = R.words[R.idx];
     showWord();
@@ -2777,7 +2845,27 @@
     var d = delayFor(w);
     R.idx++;
     if (R.idx % 50 === 0) saveProgress(false);
-    R.timer = setTimeout(tick, d);
+    R.due += d;
+    // A long stall — GC, a slow device, the OS napping — must not fire a burst
+    // of words the reader cannot possibly follow. Past a few words' worth,
+    // forgive the debt and start again from now.
+    if (now - R.due > d * CATCHUP) R.due = now + d;
+  }
+
+  function frame(now) {
+    if (!R.playing) { R.raf = 0; return; }
+    if (now >= R.due) advance(now);
+    R.raf = R.playing ? requestAnimationFrame(frame) : 0;
+  }
+
+  function startClock() {
+    R.due = (window.performance && performance.now) ? performance.now() : Date.now();
+    if (R.raf) cancelAnimationFrame(R.raf);
+    R.raf = requestAnimationFrame(frame);
+  }
+  function stopClock() {
+    if (R.raf) cancelAnimationFrame(R.raf);
+    R.raf = 0;
   }
   function play() {
     if (R.playing) return;
@@ -2791,12 +2879,17 @@
     el.context.textContent = '';
     el.hint.classList.add('hidden');
     el.statusSub.textContent = 'Reading';
-    tick();
+    armRamp();
+    updateHUD();      // the HUD otherwise waits for the next 20-word boundary,
+                      // which would leave the warm-up label stale for seconds
+    startClock();
   }
   function pause() {
     if (!R.playing) return;
     R.playing = false;
-    clearTimeout(R.timer);
+    stopClock();
+    R.pausedAt = (window.performance && performance.now) ? performance.now() : Date.now();
+    R.rampStart = 0;
     letScreenSleep();
     R.idx = Math.max(0, R.idx - 1);
     R.rewindArmed = true;
@@ -2808,7 +2901,8 @@
   }
   function finish() {
     R.playing = false;
-    clearTimeout(R.timer);
+    stopClock();
+    R.rampStart = 0;
     letScreenSleep();
     R.rewindArmed = false;
     R.idx = R.words.length;
@@ -2904,13 +2998,16 @@
   }
   function seek(i) {
     var was = R.playing;
-    if (was) { R.playing = false; clearTimeout(R.timer); }
+    if (was) { R.playing = false; stopClock(); }
     R.idx = Math.max(0, Math.min(R.words.length, i));
     R.rewindArmed = false;   // an explicit jump means exactly here, with no run-up
-    if (was) { R.playing = true; tick(); } else { showWord(); updateHUD(); saveProgress(true); }
+    if (was) { R.playing = true; startClock(); } else { showWord(); updateHUD(); saveProgress(true); }
   }
   function setWpm(v, silent) {
     settings.wpm = clampWpm(v);
+    // Touching the speed control is an explicit choice; honour it at once
+    // rather than easing toward it.
+    R.rampStart = 0;
     try { localStorage.setItem('readfast:wpm', String(settings.wpm)); } catch (e) {}
     if (!silent) updateHUD();
   }
