@@ -44,7 +44,7 @@
 </style>
 </head>
 <body>
-<script>window.BUILD={v:'v16',date:'4 September 2026'};</script>
+<script>window.BUILD={v:'v17',date:'5 September 2026'};</script>
 
 
 <style>
@@ -438,6 +438,20 @@
   .card.add:hover .plus { background: var(--accent); color: var(--accent-ink); }
   .nothing { color: var(--muted); padding: 32px 0; }
   .footnote { color: var(--dim); font-size: 12.5px; margin: 0; }
+  /* Shown only when the browser has actually refused persistent storage, so it
+     stays a real signal rather than a banner people learn to ignore. */
+  .storage-warn {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(245, 179, 49, 0.09);
+    border: 1px solid rgba(245, 179, 49, 0.28);
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .storage-warn svg { width: 17px; height: 17px; flex: none; margin-top: 1px; color: var(--accent); }
   .datarow {
     display: flex; align-items: center; justify-content: space-between;
     gap: 16px; flex-wrap: wrap;
@@ -604,7 +618,31 @@
     display: grid;
     place-items: center;
     padding: 24px;
+    /* Kills the 300ms double-tap-zoom delay so a tap pauses instantly, while
+       leaving pinch-zoom alone — a reading app must stay zoomable. */
+    touch-action: manipulation;
   }
+  /* Confirms a gesture without covering the word. Bottom-left, because the
+     mini page sits bottom-right. */
+  .gesture-cue {
+    position: absolute;
+    left: 20px; bottom: 16px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    background: rgba(24, 28, 34, 0.92);
+    border: 1px solid var(--line-strong);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    font-weight: 700; font-size: 14px;
+    color: var(--ink);
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(4px);
+    pointer-events: none;
+    transition: opacity 140ms ease, transform 140ms ease;
+    z-index: 6;
+  }
+  .gesture-cue.on { opacity: 1; transform: translateY(0); }
+  .stage-hint.touch b { font-weight: 800; color: var(--muted); }
   .reticle {
     position: relative;
     width: min(88vw, 820px);
@@ -946,6 +984,9 @@
     .reader-top .book-title { max-width: 100%; font-size: 13px; }
     .page-chip .left { display: none; }
     .context, .stage-hint { display: none; }
+    /* the touch hint is the only way these gestures are discoverable, so it stays */
+    .stage-hint.touch { display: block; }
+    .gesture-cue { left: 12px; bottom: 12px; font-size: 13px; padding: 8px 14px; }
     .minipage { width: 72px; height: 92px; right: 10px; bottom: 10px; padding: 6px; opacity: 0.85; }
     .mp-text { font-size: 3px; }
     .pagepop { padding: 10px; }
@@ -994,6 +1035,7 @@
     <symbol id="i-restore" viewBox="0 0 24 24"><path d="M12 20V9m0 0L8 13m4-4l4 4M5 7V5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4.5l8.2 14.2a.8.8 0 0 1-.7 1.2H4.5a.8.8 0 0 1-.7-1.2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v4.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.05" fill="currentColor"/></symbol>
   </defs>
 </svg>
 
@@ -1027,6 +1069,11 @@
       <div class="grid" id="grid"></div>
       <p class="nothing hidden" id="no-match">No books match that search.</p>
     </section>
+    <p class="storage-warn hidden" id="storage-warn">
+      <svg aria-hidden="true"><use href="#i-warn"/></svg>
+      <span>This browser hasn’t granted Read Fast protected storage, so it may clear your library if you don’t
+      open the app for about a week. Opening it now and then keeps it safe — a backup keeps it safe regardless.</span>
+    </p>
     <div class="datarow">
       <p class="footnote" id="footnote"></p>
       <div class="datarow-actions">
@@ -1089,6 +1136,7 @@
       <div class="word" id="word" aria-live="off"><span class="l" id="w-l"></span><span class="m" id="w-m"></span><span class="r" id="w-r"></span></div>
     </div>
     <p class="context" id="context"></p>
+    <div class="gesture-cue" id="gesture-cue" aria-hidden="true"></div>
     <button class="minipage" id="minipage" type="button" title="Open this page" aria-label="Open the current page">
       <span class="mp-head"><span class="mp-label num" id="mp-label">p. 1</span><svg><use href="#i-expand"/></svg></span>
       <span class="mp-text" id="mp-text"></span>
@@ -1213,13 +1261,14 @@
     library: $('library'), reader: $('reader'), hero: $('hero'), grid: $('grid'), noMatch: $('no-match'),
     shelfCount: $('shelf-count'), footnote: $('footnote'), manageBtn: $('manage-btn'), manageNote: $('manage-note'),
     backupBtn: $('backup-btn'), restoreBtn: $('restore-btn'), restoreInput: $('restore-input'),
+    storageWarn: $('storage-warn'),
     installBtn: $('install-btn'),
     confirm: $('confirm'), confirmTitle: $('confirm-title'), confirmText: $('confirm-text'), confirmActions: $('confirm-actions'), toasts: $('toasts'), search: $('search'),
     addBtn: $('add-btn'), fileInput: $('file-input'), brand: $('brand'),
     backBtn: $('back-btn'), title: $('r-title'), pageChip: $('page-chip'), pageCur: $('page-cur'),
     pageLeft: $('page-left'), jump: $('jump'), jumpInput: $('jump-input'),
     stage: $('stage'), word: $('word'), wl: $('w-l'), wm: $('w-m'), wr: $('w-r'),
-    context: $('context'), hint: $('stage-hint'),
+    context: $('context'), hint: $('stage-hint'), cue: $('gesture-cue'),
     track: $('track'), trackFill: $('track-fill'), trackKnob: $('track-knob'), scrubLeft: $('scrub-left'),
     restart: $('restart-btn'), skipBack: $('skip-back'), skipFwd: $('skip-fwd'),
     play: $('play-btn'), playIcon: $('play-icon'),
@@ -1263,19 +1312,68 @@
       });
     });
   }
+  // ---------- Storage durability ----------
+  // A write that fails quietly is worse than one that fails loudly: the book
+  // appears in the library, reads perfectly for the rest of the session, and is
+  // simply gone after a reload. The in-memory fallback below is deliberate — it
+  // keeps the app usable in private browsing — but it must never be mistaken
+  // for having saved something.
+  function isQuotaError(err) {
+    if (!err) return false;
+    return err.name === 'QuotaExceededError' ||
+      err.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||     // Firefox
+      err.code === 22 || err.code === 1014;
+  }
+
+  var STORAGE = { persisted: null, asked: false };
+
+  // WebKit deletes script-created storage for an origin with no user
+  // interaction in the last seven days of browser use — and not opening a
+  // reading app for a week is ordinary, not an edge case. Asking for
+  // persistence is the mitigation. Safari and Chrome both decide from the
+  // user's own interaction history and show no prompt, so this costs the
+  // reader nothing and is safe to call unannounced.
+  function askForPersistence() {
+    if (STORAGE.asked || !navigator.storage || !navigator.storage.persist) return Promise.resolve(null);
+    STORAGE.asked = true;
+    return navigator.storage.persisted().then(function (already) {
+      if (already) { STORAGE.persisted = true; return true; }
+      return navigator.storage.persist().then(function (ok) { STORAGE.persisted = !!ok; return !!ok; });
+    }).catch(function () { return null; });
+  }
+
+  function storageReport() {
+    if (!navigator.storage || !navigator.storage.estimate) return Promise.resolve(null);
+    return navigator.storage.estimate().then(function (e) {
+      var persisted = navigator.storage.persisted
+        ? navigator.storage.persisted().catch(function () { return null; })
+        : Promise.resolve(null);
+      return persisted.then(function (p) {
+        if (p !== null) STORAGE.persisted = p;
+        return { usage: (e && e.usage) || 0, quota: (e && e.quota) || 0, persisted: p };
+      });
+    }).catch(function () { return null; });
+  }
+
   var store = {
     allBooks: function () {
       return tx('books', 'readonly', function (s) { return s.getAll(); })
         .then(function (r) { return r || Object.keys(memBooks).map(function (k) { return memBooks[k]; }); })
         .catch(function () { return Object.keys(memBooks).map(function (k) { return memBooks[k]; }); });
     },
+    // putBook and putText resolve to a report rather than throwing, so a caller
+    // can finish the import and still tell the truth about what was saved.
     putBook: function (b) {
       memBooks[b.id] = b;
-      return tx('books', 'readwrite', function (s) { return s.put(b); }).catch(function () {});
+      return tx('books', 'readwrite', function (s) { return s.put(b); })
+        .then(function () { return { durable: true }; })
+        .catch(function (err) { return { durable: false, quota: isQuotaError(err), error: err }; });
     },
     putText: function (id, words) {
       memText[id] = words;
-      return tx('text', 'readwrite', function (s) { return s.put({ id: id, words: words }); }).catch(function () {});
+      return tx('text', 'readwrite', function (s) { return s.put({ id: id, words: words }); })
+        .then(function () { return { durable: true }; })
+        .catch(function (err) { return { durable: false, quota: isQuotaError(err), error: err }; });
     },
     getText: function (id) {
       if (memText[id]) return Promise.resolve(memText[id]);
@@ -1973,7 +2071,7 @@
     return store.allBooks().then(function (existing) {
       var have = {};
       existing.forEach(function (b) { have[b.id] = true; });
-      var added = 0, skipped = 0, chain = Promise.resolve();
+      var added = 0, skipped = 0, failed = 0, chain = Promise.resolve();
       books.forEach(function (b) {
         if (!b || !b.id || have[b.id]) { skipped++; return; }
         chain = chain.then(function () {
@@ -1984,10 +2082,17 @@
           book.wordCount = words.length;
           if (!book.pageStarts || !book.pageStarts.length) book.pageStarts = virtualPages(words.length);
           added++;
-          return store.putText(book.id, words).then(function () { return store.putBook(book); });
+          return store.putText(book.id, words)
+            .then(function (r) { if (!r.durable) failed++; return store.putBook(book); });
         });
       });
       return chain.then(function () {
+        askForPersistence();
+        if (failed) {
+          t.error('Restored ' + (added - failed) + ' of ' + added + ' books — the rest would not fit in this ' +
+            'browser’s storage and will be gone when you reload. Free some space and restore again.');
+          return renderLibrary();
+        }
         t.done('Restored ' + added + (added === 1 ? ' book' : ' books') +
           (skipped ? ' · ' + skipped + ' already in your library' : ''));
         return renderLibrary();
@@ -2121,9 +2226,19 @@
             book.lastRead = replacing.lastRead || 0;
           }
           var clear = replacing ? store.remove(replacing.id) : Promise.resolve();
+          var textSave = null;
           return clear.then(function () { return store.putText(id, res.words); })
-            .then(function () { return store.putBook(book); })
-            .then(function () {
+            .then(function (r) { textSave = r; return store.putBook(book); })
+            .then(function (bookSave) {
+              if (!textSave.durable || !bookSave.durable) {
+                // It is in memory and will read fine right now, which is exactly
+                // why saying nothing would be a lie by omission.
+                t.error('“' + title + '” is open, but this browser would not store it' +
+                  ((textSave.quota || bookSave.quota) ? ' — there is no room left' : '') +
+                  '. It will be gone when you reload. Remove a book to free space, then add it again.');
+                return renderLibrary();
+              }
+              askForPersistence();
               t.done((replacing ? 'Replaced “' : 'Added “') + title + '”' +
                 (trimmed ? ' — trimmed ' + fmtNum(trimmed.removed) + ' repeated words (“' + trimmed.sample + '”)' : ''));
               return renderLibrary();
@@ -2284,9 +2399,20 @@
       renderGrid(books);
       el.shelfCount.textContent = books.length ? books.length + (books.length === 1 ? ' book' : ' books') : '';
       var anyVirtual = books.some(function (b) { return !b.realPages; });
-      el.footnote.textContent = 'Books live in this browser only — nothing is uploaded anywhere, so back up if you rely on them.' +
-        (anyVirtual ? ' *EPUB, DOCX and text files have no fixed pages, so a page here is ' + WORDS_PER_VIRTUAL_PAGE + ' words.' : '') +
-        (window.BUILD ? ' · Read Fast ' + window.BUILD.v + ' · ' + window.BUILD.date : '');
+      var base = 'Books live in this browser only — nothing is uploaded anywhere, so back up if you rely on them.' +
+        (anyVirtual ? ' *EPUB, DOCX and text files have no fixed pages, so a page here is ' + WORDS_PER_VIRTUAL_PAGE + ' words.' : '');
+      var stamp = window.BUILD ? ' · Read Fast ' + window.BUILD.v + ' · ' + window.BUILD.date : '';
+      el.footnote.textContent = base + stamp;
+      // How much room the library is using, and whether this browser has agreed
+      // to keep it. Asynchronous, so the footnote is correct either way.
+      storageReport().then(function (rep) {
+        if (!rep) return;
+        var used = books.length && rep.usage
+          ? ' · ' + fmtBytes(rep.usage) + (rep.quota ? ' of ' + fmtBytes(rep.quota) : '') + ' used'
+          : '';
+        el.footnote.textContent = base + used + stamp;
+        el.storageWarn.classList.toggle('hidden', !(books.length && rep.persisted === false));
+      });
     });
   }
 
@@ -2693,6 +2819,89 @@
     saveProgress(true);
   }
   function toggle() { R.playing ? pause() : play(); }
+
+  // ---------- Touch ----------
+  // The reader carries a full keyboard set that a phone cannot reach, and the
+  // app is now installed on phones. These mirror that set exactly — same
+  // actions, same amounts — so there is one mental model rather than two.
+  var TOUCH_SWIPE = 45;       // px of travel before a drag counts as a swipe
+  var TOUCH_AXIS = 1.6;       // the dominant axis must beat the other by this
+  var TOUCH_TAP = 12;         // px of movement still forgiven as a tap
+  var TOUCH_TAP_MS = 350;
+  var TOUCH_HOLD_MS = 500;
+  var cueTimer = null;
+
+  function cue(text) {
+    el.cue.textContent = text;
+    el.cue.classList.add('on');
+    clearTimeout(cueTimer);
+    cueTimer = setTimeout(function () { el.cue.classList.remove('on'); }, 620);
+  }
+
+  function initTouch() {
+    if (!('ontouchstart' in window) && !navigator.maxTouchPoints) return;
+    var sx = 0, sy = 0, st = 0, moved = 0, held = false, holdTimer = null;
+
+    el.stage.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1) return;
+      // The mini page is its own button; let it have its own taps.
+      if (e.target.closest && e.target.closest('#minipage')) { st = 0; return; }
+      var t = e.touches[0];
+      sx = t.clientX; sy = t.clientY; st = Date.now(); moved = 0; held = false;
+      clearTimeout(holdTimer);
+      holdTimer = setTimeout(function () {
+        if (moved > TOUCH_TAP) return;
+        held = true;
+        openPageView();
+      }, TOUCH_HOLD_MS);
+    }, { passive: true });
+
+    el.stage.addEventListener('touchmove', function (e) {
+      if (!st || e.touches.length !== 1) return;
+      var t = e.touches[0];
+      var d = Math.sqrt(Math.pow(t.clientX - sx, 2) + Math.pow(t.clientY - sy, 2));
+      if (d > moved) moved = d;
+      if (moved > TOUCH_TAP) clearTimeout(holdTimer);
+    }, { passive: true });
+
+    el.stage.addEventListener('touchend', function (e) {
+      clearTimeout(holdTimer);
+      if (!st) return;
+      var dur = Date.now() - st;
+      st = 0;
+      if (held) return;                         // the long press already acted
+      var t = e.changedTouches[0];
+      var dx = t.clientX - sx, dy = t.clientY - sy;
+      var ax = Math.abs(dx), ay = Math.abs(dy);
+
+      if (ax >= TOUCH_SWIPE && ax > ay * TOUCH_AXIS) {
+        // Dragging left carries the text onward, the way a page or a filmstrip
+        // moves — and it matches the scrub bar running left to right.
+        if (dx < 0) { seek(R.idx + SKIP); cue('+' + SKIP + ' words'); }
+        else { seek(R.idx - SKIP); cue('−' + SKIP + ' words'); }
+        return;
+      }
+      if (ay >= TOUCH_SWIPE && ay > ax * TOUCH_AXIS) {
+        setWpm(settings.wpm + (dy < 0 ? STEP : -STEP));   // up is faster, as with the arrow keys
+        cue(settings.wpm + ' wpm');
+        return;
+      }
+      if (moved <= TOUCH_TAP && dur <= TOUCH_TAP_MS) {
+        toggle();
+        cue(R.playing ? 'Playing' : 'Paused');
+      }
+    }, { passive: true });
+
+    el.stage.addEventListener('touchcancel', function () {
+      clearTimeout(holdTimer); st = 0;
+    }, { passive: true });
+
+    // The keyboard hint is meaningless on a phone, and it is the only place
+    // these gestures are discoverable at all.
+    el.hint.innerHTML = '<b>Tap</b> play / pause &nbsp; <b>Swipe ←→</b> skip &nbsp; ' +
+      '<b>Swipe ↑↓</b> speed &nbsp; <b>Hold</b> page view';
+    el.hint.classList.add('touch');
+  }
   function seek(i) {
     var was = R.playing;
     if (was) { R.playing = false; clearTimeout(R.timer); }
@@ -2909,6 +3118,7 @@
 
   initServiceWorker();
   initInstall();
+  initTouch();
   renderLibrary();
 })();
 </script>
