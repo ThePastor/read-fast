@@ -44,7 +44,7 @@
 </style>
 </head>
 <body>
-<script>window.BUILD={v:'v18',date:'5 September 2026'};</script>
+<script>window.BUILD={v:'v19',date:'5 September 2026'};</script>
 
 
 <style>
@@ -321,6 +321,98 @@
   .grid.managing .card .remove-btn { display: inline-flex; }
   .grid.managing .card:hover { background: transparent; }
   .grid.managing .card:hover .cover { transform: none; }
+
+  /* ---------- Reading statistics ----------
+     One series, so no legend: the caption already says what is plotted. Columns
+     are capped well below their band so the leftover is air, carry a 4px
+     rounded cap and a square baseline, and are separated by a 2px gap in the
+     surface colour rather than by a stroke. Text never wears the data colour. */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .tile {
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .tile-label { font-size: 12px; color: var(--muted); }
+  .tile-value small {
+    font-family: var(--font-ui);
+    font-size: 12px; font-weight: 600;
+    color: var(--dim);
+    margin-left: 5px;
+    letter-spacing: 0;
+  }
+  .tile-value {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 26px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    /* proportional figures: tabular-nums makes a standalone number look loose */
+  }
+  .chart {
+    margin: 0;
+    padding: 16px 18px 12px;
+    border-radius: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+  .chart-title { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+  .plot {
+    display: flex; align-items: flex-end; gap: 2px;
+    height: 108px;
+    border-bottom: 1px solid var(--line);
+  }
+  .col {
+    position: relative;
+    flex: 1;
+    height: 100%;
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .col i {
+    display: block;
+    width: min(24px, 100%);
+    background: var(--accent);
+    border-radius: 4px 4px 0 0;
+    transition: opacity 120ms ease;
+  }
+  /* A day with no reading is a value, not a gap — show it as a stub so the
+     fortnight reads as fourteen days rather than however many were used. */
+  .col.zero i { background: var(--line-strong); border-radius: 2px; }
+  .col:hover i { opacity: 0.78; }
+  .col-tip {
+    position: absolute; bottom: calc(100% + 6px); left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 9px;
+    border-radius: 8px;
+    background: var(--surface-3);
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
+    font-size: 11.5px; font-weight: 600;
+    white-space: nowrap;
+    opacity: 0; pointer-events: none;
+    transition: opacity 110ms ease;
+    z-index: 3;
+  }
+  .col:hover .col-tip { opacity: 1; }
+  /* the extreme is labelled directly; every other value lives in the tooltip */
+  .col-peak {
+    position: absolute; bottom: calc(100% + 4px); left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px; color: var(--muted); white-space: nowrap;
+  }
+  .col:hover .col-peak { opacity: 0; }
+  .chart-axis {
+    display: flex; justify-content: space-between;
+    margin-top: 8px;
+    font-size: 11.5px; color: var(--dim);
+  }
 
   /* Cover art */
   .cover {
@@ -1066,6 +1158,25 @@
   <main class="wrap">
     <section class="hero" id="hero"></section>
 
+    <section class="stats hidden" id="stats">
+      <div class="section-head">
+        <h3>Your reading</h3>
+        <span class="count" id="st-since"></span>
+      </div>
+      <div class="tiles">
+        <div class="tile"><span class="tile-label">Words read</span><b class="tile-value" id="st-words">0</b></div>
+        <div class="tile"><span class="tile-label">Time reading</span><b class="tile-value" id="st-time">0</b></div>
+        <div class="tile"><span class="tile-label">Average pace</span><b class="tile-value" id="st-avg">0<small>wpm</small></b></div>
+        <div class="tile"><span class="tile-label">Best pace</span><b class="tile-value" id="st-best">0<small>wpm</small></b></div>
+        <div class="tile"><span class="tile-label">Day streak</span><b class="tile-value" id="st-streak">0<small>days</small></b></div>
+      </div>
+      <figure class="chart">
+        <figcaption class="chart-title">Words read, last 14 days</figcaption>
+        <div class="plot" id="st-plot" role="img" aria-label="Words read per day over the last fourteen days"></div>
+        <div class="chart-axis"><span id="st-from"></span><span id="st-to"></span></div>
+      </figure>
+    </section>
+
     <section>
       <div class="section-head">
         <h3>Your library</h3>
@@ -1272,6 +1383,9 @@
     shelfCount: $('shelf-count'), footnote: $('footnote'), manageBtn: $('manage-btn'), manageNote: $('manage-note'),
     backupBtn: $('backup-btn'), restoreBtn: $('restore-btn'), restoreInput: $('restore-input'),
     storageWarn: $('storage-warn'),
+    stats: $('stats'), stWords: $('st-words'), stTime: $('st-time'), stAvg: $('st-avg'),
+    stBest: $('st-best'), stStreak: $('st-streak'), stSince: $('st-since'),
+    stPlot: $('st-plot'), stFrom: $('st-from'), stTo: $('st-to'),
     installBtn: $('install-btn'),
     confirm: $('confirm'), confirmTitle: $('confirm-title'), confirmText: $('confirm-text'), confirmActions: $('confirm-actions'), toasts: $('toasts'), search: $('search'),
     addBtn: $('add-btn'), fileInput: $('file-input'), brand: $('brand'),
@@ -1298,11 +1412,15 @@
     if (dbPromise) return dbPromise;
     dbPromise = new Promise(function (resolve) {
       try {
-        var req = indexedDB.open('readfast', 1);
+        // v2 added 'days'. Every store is created conditionally, so an upgrade
+        // from v1 adds the new one and leaves books and text untouched — an
+        // existing library is never rebuilt or migrated.
+        var req = indexedDB.open('readfast', 2);
         req.onupgradeneeded = function () {
           var db = req.result;
           if (!db.objectStoreNames.contains('books')) db.createObjectStore('books', { keyPath: 'id' });
           if (!db.objectStoreNames.contains('text')) db.createObjectStore('text', { keyPath: 'id' });
+          if (!db.objectStoreNames.contains('days')) db.createObjectStore('days', { keyPath: 'day' });
         };
         req.onsuccess = function () { resolve(req.result); };
         req.onerror = function () { resolve(null); };
@@ -1377,13 +1495,13 @@
     putBook: function (b) {
       memBooks[b.id] = b;
       return tx('books', 'readwrite', function (s) { return s.put(b); })
-        .then(function () { return { durable: true }; })
+        .then(function (r) { return { durable: r !== null, noDb: r === null }; })
         .catch(function (err) { return { durable: false, quota: isQuotaError(err), error: err }; });
     },
     putText: function (id, words) {
       memText[id] = words;
       return tx('text', 'readwrite', function (s) { return s.put({ id: id, words: words }); })
-        .then(function () { return { durable: true }; })
+        .then(function (r) { return { durable: r !== null, noDb: r === null }; })
         .catch(function (err) { return { durable: false, quota: isQuotaError(err), error: err }; });
     },
     getText: function (id) {
@@ -1399,6 +1517,98 @@
       ]).catch(function (err) { console.warn('remove failed', err); });
     }
   };
+
+  // ---------- Reading statistics ----------
+  // One record per calendar day, in the reader's own timezone, holding the words
+  // read, the milliseconds spent reading them, and the best sustained pace set
+  // that day. Days are tiny and one per day of use, so the whole history can be
+  // read at once without a cursor.
+  //
+  // Time is accumulated from the word delays themselves rather than a wall
+  // clock, so it counts time actually spent READING — a book left open on a
+  // paused screen adds nothing, which is what makes the average pace honest.
+  var STATS_MIN_RUN_MS = 60000;    // a run must last a minute before it can set a record
+  var STATS_DAY_MIN_MS = 60000;    // and a day needs a minute before it counts to a streak
+  var memDays = {};
+
+  function dayKey(d) {
+    d = d || new Date();
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+
+  var stats = {
+    add: function (words, ms, best) {
+      if (!words && !ms && !best) return Promise.resolve();
+      var key = dayKey();
+      var mem = memDays[key] || { day: key, words: 0, ms: 0, best: 0 };
+      mem.words += words; mem.ms += ms; mem.best = Math.max(mem.best, best || 0);
+      memDays[key] = mem;
+      return tx('days', 'readwrite', function (s) { return s.get(key); })
+        .then(function (rec) {
+          var merged = rec || { day: key, words: 0, ms: 0, best: 0 };
+          merged.words += words; merged.ms += ms;
+          merged.best = Math.max(merged.best || 0, best || 0);
+          memDays[key] = merged;
+          return tx('days', 'readwrite', function (s) { return s.put(merged); });
+        })
+        .catch(function () {});
+    },
+    all: function () {
+      return tx('days', 'readonly', function (s) { return s.getAll(); })
+        .then(function (r) { return r && r.length ? r : Object.keys(memDays).map(function (k) { return memDays[k]; }); })
+        .catch(function () { return Object.keys(memDays).map(function (k) { return memDays[k]; }); });
+    }
+  };
+
+  // Consecutive days ending today (or yesterday — a streak should survive until
+  // the day is actually missed, otherwise it "breaks" every morning before you
+  // have had a chance to read).
+  function streakOf(byDay) {
+    var d = new Date(), n = 0;
+    if (!byDay[dayKey(d)] || byDay[dayKey(d)].ms < STATS_DAY_MIN_MS) d.setDate(d.getDate() - 1);
+    for (;;) {
+      var rec = byDay[dayKey(d)];
+      if (!rec || rec.ms < STATS_DAY_MIN_MS) break;
+      n++;
+      d.setDate(d.getDate() - 1);
+    }
+    return n;
+  }
+
+  function statsSummary(days) {
+    var byDay = {}, words = 0, ms = 0, best = 0;
+    days.forEach(function (r) {
+      byDay[r.day] = r;
+      words += r.words || 0; ms += r.ms || 0; best = Math.max(best, r.best || 0);
+    });
+    var recent = [], d = new Date();
+    d.setDate(d.getDate() - 13);
+    for (var i = 0; i < 14; i++) {
+      var k = dayKey(d);
+      recent.push({ day: k, date: new Date(d), words: (byDay[k] && byDay[k].words) || 0 });
+      d.setDate(d.getDate() + 1);
+    }
+    return {
+      words: words, ms: ms, best: Math.round(best),
+      avg: ms > 0 ? Math.round(words / (ms / 60000)) : 0,
+      streak: streakOf(byDay),
+      recent: recent,
+      // words per day over the days actually read in the last fortnight — the
+      // basis for a finish estimate that reflects real habits, not one big day
+      // Words per CALENDAR day, measured from the first day you actually read
+      // inside the window — so a finish estimate accounts for the days you skip,
+      // without punishing someone who only started three days ago.
+      pace: (function () {
+        var first = -1, total = 0;
+        recent.forEach(function (r, i) {
+          if (r.words > 0 && first < 0) first = i;
+          if (first >= 0) total += r.words;
+        });
+        if (first < 0) return 0;
+        return total / (recent.length - first);
+      })()
+    };
+  }
 
   // ---------- Text processing ----------
   function tokenize(text) {
@@ -2244,9 +2454,15 @@
               if (!textSave.durable || !bookSave.durable) {
                 // It is in memory and will read fine right now, which is exactly
                 // why saying nothing would be a lie by omission.
-                t.error('“' + title + '” is open, but this browser would not store it' +
-                  ((textSave.quota || bookSave.quota) ? ' — there is no room left' : '') +
-                  '. It will be gone when you reload. Remove a book to free space, then add it again.');
+                var why = (textSave.quota || bookSave.quota)
+                  ? ' — there is no room left. Remove a book to free space, then add it again.'
+                  : (textSave.noDb || bookSave.noDb)
+                    ? ' — this browser has no storage available here. Private browsing, or another tab ' +
+                      'running an older copy of Read Fast, will both do that; closing other tabs and ' +
+                      'reloading usually fixes it.'
+                    : '. Remove a book to free space, then add it again.';
+                t.error('“' + title + '” is open, but it could not be saved' + why +
+                  ' It will be gone when you reload.');
                 return renderLibrary();
               }
               askForPersistence();
@@ -2272,6 +2488,90 @@
     el.manageNote.classList.toggle('hidden', !on);
   }
   function fmtNum(n) { return n.toLocaleString(); }
+  // Stat-tile values are auto-compact: 1,284 / 12.9K / 4.2M.
+  function fmtCompact(n) {
+    if (n < 1000) return String(Math.round(n));
+    if (n < 10000) return fmtNum(Math.round(n));
+    if (n < 1000000) return (n / 1000).toFixed(n < 100000 ? 1 : 0).replace(/\.0$/, '') + 'K';
+    return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  }
+  function fmtDuration(ms) {
+    var s = Math.round(ms / 1000);
+    if (s < 60) return s + 's';
+    var m = Math.round(s / 60);
+    if (m < 60) return m + 'm';
+    var h = Math.floor(m / 60);
+    return h + 'h' + (m % 60 ? ' ' + (m % 60) + 'm' : '');
+  }
+
+  // "6.7 h left" is a stopwatch answer to a calendar question. Given how much
+  // you actually read per day, this is the date you would finish — which is the
+  // number a reader is really asking for.
+  function renderHeroEstimate(sum) {
+    var label = el.hero.querySelector('.progress-label span:last-child');
+    if (!label || !label.dataset.eta || !sum || !sum.pace) return;
+    var featured = allBooks && allBooks[0];
+    if (!featured || featured.pos >= featured.wordCount) return;
+    var remaining = featured.wordCount - featured.pos;
+    var days = Math.ceil(remaining / sum.pace);
+    if (!isFinite(days) || days < 1 || days > 3650) return;
+    var when = new Date();
+    when.setDate(when.getDate() + days);
+    label.textContent = label.dataset.eta + ' · at your pace, done ' +
+      (days <= 1 ? 'today' : when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+  }
+
+  // ---------- The reading panel ----------
+  function renderStats() {
+    return stats.all().then(function (days) {
+      var sum = statsSummary(days || []);
+      if (!sum.ms) { el.stats.classList.add('hidden'); return sum; }
+      el.stats.classList.remove('hidden');
+      el.stWords.textContent = fmtCompact(sum.words);
+      el.stTime.textContent = fmtDuration(sum.ms);
+      var setValue = function (node, text, unit) {
+        node.textContent = text;
+        if (unit && text !== '—') { var u = document.createElement('small'); u.textContent = unit; node.appendChild(u); }
+      };
+      setValue(el.stAvg, sum.avg ? fmtNum(sum.avg) : '—', 'wpm');
+      setValue(el.stBest, sum.best ? fmtNum(sum.best) : '—', 'wpm');
+      setValue(el.stStreak, String(sum.streak), sum.streak === 1 ? 'day' : 'days');
+      el.stSince.textContent = sum.streak === 1 ? 'read today' :
+        (sum.streak > 1 ? sum.streak + ' days running' : '');
+
+      var peak = 0;
+      sum.recent.forEach(function (r) { if (r.words > peak) peak = r.words; });
+      var peakDay = peak;
+      el.stPlot.innerHTML = '';
+      sum.recent.forEach(function (r) {
+        var col = document.createElement('div');
+        col.className = 'col' + (r.words ? '' : ' zero');
+        var label = r.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+        col.setAttribute('aria-label', label + ': ' + fmtNum(r.words) + ' words');
+        var bar = document.createElement('i');
+        // 3px keeps a zero day visible as a value rather than a gap
+        bar.style.height = r.words ? Math.max(4, Math.round(100 * r.words / peak)) + '%' : '3px';
+        col.appendChild(bar);
+        var tip = document.createElement('span');
+        tip.className = 'col-tip';
+        tip.textContent = label + ' · ' + fmtNum(r.words);
+        col.appendChild(tip);
+        // Only the extreme is labelled directly; the rest is in the tooltip.
+        if (r.words && r.words === peakDay) {
+          var pk = document.createElement('span');
+          pk.className = 'col-peak';
+          pk.textContent = fmtCompact(r.words);
+          col.appendChild(pk);
+          peakDay = -1;                    // label the first peak only
+        }
+        el.stPlot.appendChild(col);
+      });
+      var fmtDay = function (d) { return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); };
+      el.stFrom.textContent = fmtDay(sum.recent[0].date);
+      el.stTo.textContent = 'Today';
+      return sum;
+    }).catch(function () { return null; });
+  }
   function pagesLabel(b) {
     var p = b.pageStarts.length;
     return fmtNum(p) + (p === 1 ? ' page' : ' pages') + (b.realPages ? '' : '*');
@@ -2348,6 +2648,7 @@
     var labels = body.querySelectorAll('.progress-label span');
     labels[0].innerHTML = finished ? '<b>Finished</b>' : (featured.pos > 0 ? '<b>' + pct + '%</b> · page ' + fmtNum(page) + ' of ' + fmtNum(featured.pageStarts.length) : 'Not started');
     labels[1].textContent = finished ? '' : etaText(featured, featured.wpm) + ' at ' + (featured.wpm || settings.wpm) + ' wpm';
+    labels[1].dataset.eta = labels[1].textContent;      // renderHeroEstimate appends to this
     body.querySelector('#hero-read span').textContent = finished ? 'Read again' : (featured.pos > 0 ? 'Continue' : 'Start reading');
     body.querySelector('#hero-read').addEventListener('click', function () { openBook(featured, finished); });
     var rs = body.querySelector('#hero-restart');
@@ -2406,6 +2707,7 @@
       allBooks = books;
       if (managing && !books.length) setManaging(false);
       el.manageBtn.classList.toggle('hidden', !books.length);
+      renderStats().then(function (sum) { if (sum) renderHeroEstimate(sum); });
       renderHero(books);
       renderGrid(books);
       el.shelfCount.textContent = books.length ? books.length + (books.length === 1 ? ' book' : ' books') : '';
@@ -2432,7 +2734,8 @@
   try { var s = localStorage.getItem('readfast:wpm'); if (s) settings.wpm = clampWpm(parseInt(s, 10)); } catch (e) {}
 
   var R = { book: null, words: [], idx: 0, playing: false, lastSave: 0, rewindArmed: false,
-            due: 0, raf: 0, rampStart: 0, pausedAt: 0, chapter: null };
+            due: 0, raf: 0, rampStart: 0, pausedAt: 0, chapter: null,
+            run: { words: 0, ms: 0 }, flushed: { words: 0, ms: 0 } };
 
   function clampWpm(v) { if (!isFinite(v)) return 300; return Math.max(MIN_WPM, Math.min(MAX_WPM, Math.round(v))); }
   function pageOf(starts, idx) {
@@ -2518,6 +2821,19 @@
       renderLibrary();
     });
   }
+  // Writes the unflushed part of the current run into today's record. Called
+  // periodically so a crash costs seconds rather than a session, and with
+  // endOfRun at every stop — only then can the run be judged for a personal
+  // best, because only then is its full length known.
+  function flushStats(endOfRun) {
+    var dw = R.run.words - R.flushed.words, dm = R.run.ms - R.flushed.ms;
+    var best = (endOfRun && R.run.ms >= STATS_MIN_RUN_MS) ? R.run.words / (R.run.ms / 60000) : 0;
+    R.flushed.words = R.run.words; R.flushed.ms = R.run.ms;
+    var done = (dw > 0 || dm > 0 || best) ? stats.add(dw, dm, best) : Promise.resolve();
+    if (endOfRun) { R.run = { words: 0, ms: 0 }; R.flushed = { words: 0, ms: 0 }; }
+    return done;
+  }
+
   function saveProgress(force) {
     if (!R.book) return Promise.resolve();
     var now = Date.now();
@@ -2526,6 +2842,7 @@
     R.book.pos = R.idx;
     R.book.wpm = settings.wpm;
     R.book.lastRead = now;
+    flushStats(false);
     return store.putBook(R.book);
   }
 
@@ -2843,6 +3160,7 @@
     showWord();
     if (R.idx % 20 === 0) updateHUD(); else miniHighlight();
     var d = delayFor(w);
+    R.run.words++; R.run.ms += d;
     R.idx++;
     if (R.idx % 50 === 0) saveProgress(false);
     R.due += d;
@@ -2879,6 +3197,7 @@
     el.context.textContent = '';
     el.hint.classList.add('hidden');
     el.statusSub.textContent = 'Reading';
+    R.run = { words: 0, ms: 0 }; R.flushed = { words: 0, ms: 0 };
     armRamp();
     updateHUD();      // the HUD otherwise waits for the next 20-word boundary,
                       // which would leave the warm-up label stale for seconds
@@ -2888,6 +3207,7 @@
     if (!R.playing) return;
     R.playing = false;
     stopClock();
+    flushStats(true);
     R.pausedAt = (window.performance && performance.now) ? performance.now() : Date.now();
     R.rampStart = 0;
     letScreenSleep();
@@ -2902,6 +3222,7 @@
   function finish() {
     R.playing = false;
     stopClock();
+    flushStats(true);
     R.rampStart = 0;
     letScreenSleep();
     R.rewindArmed = false;
