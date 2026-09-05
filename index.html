@@ -44,7 +44,7 @@
 </style>
 </head>
 <body>
-<script>window.BUILD={v:'v19',date:'5 September 2026'};</script>
+<script>window.BUILD={v:'v20',date:'5 September 2026'};</script>
 
 
 <style>
@@ -544,6 +544,14 @@
     line-height: 1.5;
   }
   .storage-warn svg { width: 17px; height: 17px; flex: none; margin-top: 1px; color: var(--accent); }
+  .storage-warn b { color: var(--ink); }
+  .storage-warn .btn { margin-left: 8px; vertical-align: middle; }
+  /* an empty-looking library is alarming, so this one is louder than the rest */
+  .storage-warn.urgent {
+    background: rgba(255, 107, 91, 0.10);
+    border-color: rgba(255, 107, 91, 0.32);
+  }
+  .storage-warn.urgent svg { color: var(--danger); }
   .datarow {
     display: flex; align-items: center; justify-content: space-between;
     gap: 16px; flex-wrap: wrap;
@@ -1189,6 +1197,13 @@
       <div class="grid" id="grid"></div>
       <p class="nothing hidden" id="no-match">No books match that search.</p>
     </section>
+    <p class="storage-warn urgent hidden" id="db-blocked">
+      <svg aria-hidden="true"><use href="#i-warn"/></svg>
+      <span><b>Your library is still here.</b> Read Fast is open in another tab running an older
+      version, which is holding the old storage format open. Close the other Read&nbsp;Fast tabs,
+      then reload this one.
+      <button class="btn soft tiny" id="db-reload" type="button">Reload</button></span>
+    </p>
     <p class="storage-warn hidden" id="storage-warn">
       <svg aria-hidden="true"><use href="#i-warn"/></svg>
       <span>This browser hasn’t granted Read Fast protected storage, so it may clear your library if you don’t
@@ -1382,7 +1397,7 @@
     library: $('library'), reader: $('reader'), hero: $('hero'), grid: $('grid'), noMatch: $('no-match'),
     shelfCount: $('shelf-count'), footnote: $('footnote'), manageBtn: $('manage-btn'), manageNote: $('manage-note'),
     backupBtn: $('backup-btn'), restoreBtn: $('restore-btn'), restoreInput: $('restore-input'),
-    storageWarn: $('storage-warn'),
+    storageWarn: $('storage-warn'), dbBlocked: $('db-blocked'), dbReload: $('db-reload'),
     stats: $('stats'), stWords: $('st-words'), stTime: $('st-time'), stAvg: $('st-avg'),
     stBest: $('st-best'), stStreak: $('st-streak'), stSince: $('st-since'),
     stPlot: $('st-plot'), stFrom: $('st-from'), stTo: $('st-to'),
@@ -1408,6 +1423,7 @@
   // ---------- Storage (IndexedDB, with in-memory fallback) ----------
   var memBooks = {}, memText = {};
   var dbPromise = null;
+  var DB_BLOCKED = false;
   function openDB() {
     if (dbPromise) return dbPromise;
     dbPromise = new Promise(function (resolve) {
@@ -1424,7 +1440,10 @@
         };
         req.onsuccess = function () { resolve(req.result); };
         req.onerror = function () { resolve(null); };
-        req.onblocked = function () { resolve(null); };
+        // Another tab still holds an older schema, so the upgrade cannot run.
+        // The app keeps working in memory — but the library will look EMPTY,
+        // which reads as data loss unless we say what actually happened.
+        req.onblocked = function () { DB_BLOCKED = true; resolve(null); };
       } catch (e) { resolve(null); }
     });
     return dbPromise;
@@ -2707,6 +2726,7 @@
       allBooks = books;
       if (managing && !books.length) setManaging(false);
       el.manageBtn.classList.toggle('hidden', !books.length);
+      el.dbBlocked.classList.toggle('hidden', !DB_BLOCKED);
       renderStats().then(function (sum) { if (sum) renderHeroEstimate(sum); });
       renderHero(books);
       renderGrid(books);
@@ -3533,6 +3553,8 @@
   });
   document.addEventListener('visibilitychange', function () { if (document.hidden) pause(); });
   window.addEventListener('beforeunload', function () { if (R.book) { R.book.pos = R.playing ? Math.max(0, R.idx - 1) : R.idx; store.putBook(R.book); } });
+
+  el.dbReload.addEventListener('click', function () { location.reload(); });
 
   initServiceWorker();
   initInstall();
