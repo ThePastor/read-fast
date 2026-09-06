@@ -44,7 +44,7 @@
 </style>
 </head>
 <body>
-<script>window.BUILD={v:'v22',date:'6 September 2026'};</script>
+<script>window.BUILD={v:'v23',date:'6 September 2026'};</script>
 
 
 <style>
@@ -1921,6 +1921,34 @@
   }
 
   // --- PDF ---
+  // Library exceptions are written for developers: "No password given",
+  // "invalid distance too far back". Shown raw they tell a reader nothing about
+  // what to DO. Each known failure gets a specific message and, where one
+  // exists, a way out.
+  function describeImportError(err, name) {
+    var q = '“' + name + '”';
+    var kind = (err && err.name) || '';
+    var msg = String((err && err.message) || '');
+
+    if (kind === 'PasswordException' || /password/i.test(msg)) {
+      return q + ' is password-protected, and Read Fast cannot open an encrypted PDF. ' +
+        'Open it in a PDF reader, save an unprotected copy, then add that.';
+    }
+    if (kind === 'InvalidPDFException' || /invalid pdf|not a pdf/i.test(msg)) {
+      return q + ' is not a readable PDF — the file looks damaged or only partly downloaded. ' +
+        'Download it again and retry.';
+    }
+    if (msg === 'DRM_LOCKED') {
+      return q + ' is DRM-protected — the store it came from has locked it to its own app. ' +
+        'Read Fast can only read unprotected files; a DRM-free EPUB, or a PDF you own, will work.';
+    }
+    if (/invalid (zip|distance|block|header)|unexpected eof|incorrect header|invalid stored block|unknown compression/i.test(msg)) {
+      return q + ' could not be unpacked — the file is damaged or incomplete. Download it again and retry.';
+    }
+    if (/^\s*$/.test(msg)) return 'Something went wrong reading ' + q + '.';
+    return msg;
+  }
+
   function parsePDF(buf, onProgress) {
     var lib = window.pdfjsLib;
     if (!lib) return Promise.reject(new Error('PDF support failed to load.'));
@@ -2044,6 +2072,18 @@
         for (var i = 0; i < keys.length; i++) if (keys[i].toLowerCase() === lower) return files[keys[i]];
         return null;
       };
+      // encryption.xml appears in perfectly readable EPUBs too — it is how fonts
+      // are obfuscated. Only encrypted CONTENT means the book itself is locked.
+      var enc = get('META-INF/encryption.xml');
+      if (enc) {
+        var encTxt = decode(enc);
+        var uris = encTxt.match(/URI\s*=\s*"([^"]+)"/gi) || [];
+        var contentLocked = uris.some(function (u) {
+          return !/\.(otf|ttf|woff2?|eot)("|$)/i.test(u);
+        });
+        // The parser has no filename; describeImportError adds it.
+        if (contentLocked) return reject(new Error('DRM_LOCKED'));
+      }
       var container = get('META-INF/container.xml');
       var opfPath = null;
       if (container) {
@@ -2251,7 +2291,12 @@
   // Classify a zip: EPUB, DOCX, or a container holding book files.
   function classifyZip(buf) {
     var files;
-    try { files = fflate.unzipSync(new Uint8Array(buf)); } catch (e) { return { kind: null }; }
+    // A failure to unpack and an archive that simply holds no book are very
+    // different problems for the reader — one is a damaged download, the other
+    // is the wrong file. Collapsing both into kind:null sent people to fix the
+    // wrong thing.
+    try { files = fflate.unzipSync(new Uint8Array(buf)); }
+    catch (e) { return { kind: null, broken: true, error: e }; }
     var names = Object.keys(files).filter(function (n) { return !/(^|\/)__MACOSX\//.test(n) && !/(^|\/)\.[^\/]*$/.test(n); });
     var has = function (re) { return names.some(function (n) { return re.test(n); }); };
     if (has(/(^|\/)META-INF\/container\.xml$/i) || has(/\.opf$/i) || has(/(^|\/)mimetype$/)) return { kind: 'epub' };
@@ -2569,6 +2614,8 @@
           });
           return chain.then(function () { return null; });
         }
+        else if (z.broken) throw new Error('“' + file.name + '” could not be unpacked — the archive is damaged ' +
+          'or only partly downloaded. Download it again and retry.');
         else throw new Error('“' + file.name + '” is a zip with no book inside. Put a PDF, EPUB, DOCX, TXT or MD in it.');
       }
       if (!fmt) throw new Error('“' + file.name + '” isn’t a supported format. Try PDF, EPUB, DOCX, TXT or MD.');
@@ -2653,7 +2700,7 @@
         });
       });
     }).catch(function (err) {
-      t.error((err && err.message) ? err.message : 'Something went wrong reading “' + file.name + '”.');
+      t.error(describeImportError(err, file.name));
     });
   }
 
