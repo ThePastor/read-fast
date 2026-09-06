@@ -9,7 +9,7 @@
  * previous cache in activate(). The page is told when a new worker is waiting
  * and offers a Reload, rather than swapping the app out underneath the reader.
  */
-var VERSION = 'v21';
+var VERSION = 'v22';
 var CACHE = 'read-fast-' + VERSION;
 var DOC = new URL('./', self.location).href;
 var SHELL = [

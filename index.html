@@ -44,7 +44,7 @@
 </style>
 </head>
 <body>
-<script>window.BUILD={v:'v21',date:'5 September 2026'};</script>
+<script>window.BUILD={v:'v22',date:'6 September 2026'};</script>
 
 
 <style>
@@ -573,6 +573,9 @@
   }
   .confirm-box {
     width: min(420px, 100%);
+    max-height: min(86vh, 100%);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     background: var(--surface-2);
     border: 1px solid var(--line-strong);
     border-radius: 16px;
@@ -581,7 +584,46 @@
   }
   .confirm-box h4 { font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; margin: 0 0 6px; text-wrap: balance; }
   .confirm-box p { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
-  .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+  .confirm-actions {
+    display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;
+    position: sticky; bottom: -18px;
+    padding: 10px 0 0;
+    background: var(--surface-2);
+  }
+  .reader-left { display: flex; align-items: center; gap: 2px; }
+  /* The shortcuts were discoverable only from a hint line that is hidden while
+     playing and on every phone. Both columns are shown to everyone: a laptop
+     with a touchscreen has both, and neither list is a secret. */
+  .help-box { width: min(520px, 100%); }
+  .help-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 14px;
+    font-size: 13.5px;
+  }
+  .help-table th {
+    text-align: left;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 0 7px;
+    border-bottom: 1px solid var(--line);
+  }
+  .help-table td { padding: 7px 0; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .help-table td:first-child { color: var(--ink); }
+  .help-table td:nth-child(2) { width: 108px; }
+  .help-table td:last-child { color: var(--muted); width: 40%; }
+  .help-table tr:last-child td { border-bottom: 0; }
+  .help-table kbd {
+    font: inherit; font-weight: 700; font-size: 12px; color: var(--ink);
+    padding: 2px 7px; border-radius: 5px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--line-strong);
+  }
+  @media (max-width: 600px) {
+    .help-table td:nth-child(2) { width: auto; }
+    .help-table { font-size: 12.5px; }
+  }
+
   .btn.danger { background: var(--danger); color: #fff; }
   .btn.danger:hover { filter: brightness(1.08); }
 
@@ -1144,6 +1186,7 @@
     <symbol id="i-restore" viewBox="0 0 24 24"><path d="M12 20V9m0 0L8 13m4-4l4 4M5 7V5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9.4 9.3a2.7 2.7 0 1 1 3.4 2.6c-.6.2-.9.7-.9 1.3v.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.05" fill="currentColor"/></symbol>
     <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4.5l8.2 14.2a.8.8 0 0 1-.7 1.2H4.5a.8.8 0 0 1-.7-1.2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v4.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.05" fill="currentColor"/></symbol>
   </defs>
 </svg>
@@ -1193,7 +1236,7 @@
           <button class="btn soft manage-btn" id="manage-btn" type="button" aria-pressed="false"><svg><use href="#i-trash"/></svg><span>Manage</span></button>
         </div>
       </div>
-      <p class="manage-note hidden" id="manage-note">Removing a book deletes its text and your place in it from this browser. You can always add it again.</p>
+      <p class="manage-note hidden" id="manage-note">Removing a book deletes its text and your place in it from this browser. You get a few seconds to undo, and you can always add it again.</p>
       <div class="grid" id="grid"></div>
       <p class="nothing hidden" id="no-match">No books match that search.</p>
     </section>
@@ -1232,6 +1275,34 @@
   <div class="toasts" id="toasts"></div>
 </div>
 
+<div class="confirm hidden" id="help" role="dialog" aria-modal="true" aria-labelledby="help-title">
+  <div class="confirm-box help-box">
+    <h4 id="help-title">How to read</h4>
+    <p>Every control has a key and a gesture. Both do the same thing.</p>
+    <table class="help-table">
+      <thead><tr><th>Action</th><th>Keys</th><th>Touch</th></tr></thead>
+      <tbody>
+        <tr><td>Play or pause</td><td><kbd>Space</kbd> <kbd>K</kbd></td><td>Tap the page</td></tr>
+        <tr><td>Skip 10 words</td><td><kbd>←</kbd> <kbd>→</kbd></td><td>Swipe sideways</td></tr>
+        <tr><td>Speed, 25 wpm a step</td><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Swipe up or down</td></tr>
+        <tr><td>Open the page view</td><td><kbd>P</kbd></td><td>Press and hold</td></tr>
+        <tr><td>Back to the library</td><td><kbd>Esc</kbd></td><td>The arrow, top left</td></tr>
+        <tr><td>This panel</td><td><kbd>?</kbd></td><td>The <span aria-hidden="true">?</span> button</td></tr>
+      </tbody>
+    </table>
+    <table class="help-table">
+      <thead><tr><th>Page view</th><th>Keys</th><th>Touch</th></tr></thead>
+      <tbody>
+        <tr><td>Turn the page</td><td><kbd>←</kbd> <kbd>→</kbd></td><td>The arrows</td></tr>
+        <tr><td>Chapters</td><td><kbd>C</kbd></td><td>The list button</td></tr>
+        <tr><td>Jump to the chosen word</td><td><kbd>Enter</kbd></td><td>Jump here</td></tr>
+        <tr><td>Close</td><td><kbd>Esc</kbd></td><td>The <span aria-hidden="true">✕</span></td></tr>
+      </tbody>
+    </table>
+    <div class="confirm-actions"><button class="btn primary" id="help-close" type="button">Got it</button></div>
+  </div>
+</div>
+
 <div class="confirm hidden" id="confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
   <div class="confirm-box">
     <h4 id="confirm-title"></h4>
@@ -1243,7 +1314,10 @@
 <!-- ---------- Reader ---------- -->
 <section id="reader" class="hidden" aria-label="Reader">
   <div class="reader-top">
-    <div><button class="icon-btn" id="back-btn" type="button" aria-label="Back to library" title="Back to library (Esc)"><svg><use href="#i-down"/></svg></button></div>
+    <div class="reader-left">
+      <button class="icon-btn" id="back-btn" type="button" aria-label="Back to library" title="Back to library (Esc)"><svg><use href="#i-down"/></svg></button>
+      <button class="icon-btn" id="help-btn" type="button" aria-label="How to read" title="How to read (?)"><svg><use href="#i-help"/></svg></button>
+    </div>
     <div class="center">
       <div class="eyebrow">Now reading</div>
       <div class="book-title" id="r-title"></div>
@@ -1264,7 +1338,7 @@
   </div>
 
   <div class="stage" id="stage">
-    <div class="stage-hint" id="stage-hint"><kbd>Space</kbd> play / pause &nbsp; <kbd>←</kbd> <kbd>→</kbd> skip &nbsp; <kbd>↑</kbd> <kbd>↓</kbd> speed &nbsp; <kbd>P</kbd> page view</div>
+    <div class="stage-hint" id="stage-hint"><kbd>Space</kbd> play / pause &nbsp; <kbd>←</kbd> <kbd>→</kbd> skip &nbsp; <kbd>↑</kbd> <kbd>↓</kbd> speed &nbsp; <kbd>P</kbd> page view &nbsp; <kbd>?</kbd> all shortcuts</div>
     <div class="reticle">
       <span class="tick top"></span><span class="tick bottom"></span>
       <div class="word" id="word" aria-live="off"><span class="l" id="w-l"></span><span class="m" id="w-m"></span><span class="r" id="w-r"></span></div>
@@ -1396,6 +1470,7 @@
     shelfCount: $('shelf-count'), footnote: $('footnote'), manageBtn: $('manage-btn'), manageNote: $('manage-note'),
     backupBtn: $('backup-btn'), restoreBtn: $('restore-btn'), restoreInput: $('restore-input'),
     storageWarn: $('storage-warn'), dbBlocked: $('db-blocked'), dbReload: $('db-reload'),
+    help: $('help'), helpBtn: $('help-btn'), helpClose: $('help-close'),
     dbWhy: $('db-blocked-why'),
     stats: $('stats'), stWords: $('st-words'), stTime: $('st-time'), stAvg: $('st-avg'),
     stBest: $('st-best'), stStreak: $('st-streak'), stSince: $('st-since'),
@@ -2193,6 +2268,50 @@
   }
 
   // ---------- Confirm dialog ----------
+  // ---------- Focus management ----------
+  // A modal that does not trap focus lets Tab walk into the page behind it,
+  // where a screen reader will read out a library the user cannot see. And
+  // restoring focus to a fixed element rather than to whatever opened the
+  // dialog loses the reader's place on the way out.
+  var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+
+  function isVisible(n) {
+    if (!n.getClientRects().length) return false;          // display:none, or clipped away
+    try { return getComputedStyle(n).visibility !== 'hidden'; } catch (e) { return true; }
+  }
+  function focusablesIn(root) {
+    return [].slice.call(root.querySelectorAll(FOCUSABLE)).filter(isVisible);
+  }
+
+  var trapStack = [];
+  function trapFocus(root, moveTo) {
+    trapStack.push({ root: root, restore: document.activeElement });
+    var target = moveTo || focusablesIn(root)[0];
+    if (target) { try { target.focus(); } catch (e) {} }
+  }
+  function releaseFocus(root) {
+    for (var i = trapStack.length - 1; i >= 0; i--) {
+      if (trapStack[i].root !== root) continue;
+      var entry = trapStack.splice(i, 1)[0];
+      // only give focus back if the element is still on the page
+      if (entry.restore && document.contains(entry.restore) && isVisible(entry.restore)) {
+        try { entry.restore.focus(); } catch (e) {}
+      }
+      return;
+    }
+  }
+  function handleTrapTab(e) {
+    if (e.key !== 'Tab' || !trapStack.length) return false;
+    var root = trapStack[trapStack.length - 1].root;
+    var list = focusablesIn(root);
+    if (!list.length) { e.preventDefault(); return true; }
+    var first = list[0], last = list[list.length - 1], active = document.activeElement;
+    if (!root.contains(active)) { e.preventDefault(); first.focus(); return true; }
+    if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); return true; }
+    if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); return true; }
+    return false;
+  }
+
   var confirmResolve = null, confirmCancelValue = null;
   // The artifact viewer blocks window.confirm(), so every decision uses this dialog.
   function askChoice(title, text, choices, cancelValue) {
@@ -2211,8 +2330,7 @@
         el.confirmActions.appendChild(b);
       });
       el.confirm.classList.remove('hidden');
-      var last = el.confirmActions.lastChild;
-      if (last) last.focus();
+      trapFocus(el.confirm, el.confirmActions.lastChild);
     });
   }
   function askConfirm(title, text, yesLabel) {
@@ -2223,23 +2341,52 @@
   }
   function settleConfirm(v) {
     el.confirm.classList.add('hidden');
+    releaseFocus(el.confirm);
     var r = confirmResolve; confirmResolve = null;
     if (r) r(v);
   }
   el.confirm.addEventListener('click', function (e) { if (e.target === el.confirm) settleConfirm(confirmCancelValue); });
 
+  // Removal is instant, with an undo — not a confirm. A confirm only guards the
+  // tap that opens it, and people click through them reflexively; it does
+  // nothing for the reader who meant it and then changed their mind a second
+  // later. Undo covers both cases, in fewer taps.
+  var UNDO_MS = 6000;
+
   function removeBook(b) {
-    askConfirm('Remove “' + b.title + '”?', 'This deletes the book’s text and your place in it from this browser. You can add it again any time.', 'Remove')
-      .then(function (ok) {
-        if (!ok) return;
-        return store.remove(b.id).then(function () {
-          return renderLibrary();
-        }).then(function () {
-          var still = allBooks.some(function (x) { return x.id === b.id; });
-          if (still) toast('').error('“' + b.title + '” couldn’t be removed. Reload the page and try again.');
-          else toast('').done('Removed “' + b.title + '”');
-        });
+    // Snapshot the text first: store.remove() deletes it, and without a copy
+    // the undo could restore a book with nothing in it.
+    return store.getText(b.id).then(function (words) {
+      var snap = { book: b, words: words || [] };
+      return store.remove(b.id).then(function () {
+        return renderLibrary();
+      }).then(function () {
+        var still = allBooks.some(function (x) { return x.id === b.id; });
+        if (still) { toast('').error('“' + b.title + '” couldn’t be removed. Reload the page and try again.'); return; }
+        offerUndo(snap);
       });
+    });
+  }
+
+  function offerUndo(snap) {
+    var t = toast('Removed “' + snap.book.title + '”');
+    var btn = document.createElement('button');
+    btn.className = 'btn soft tiny';
+    btn.type = 'button';
+    btn.textContent = 'Undo';
+    var timer = setTimeout(function () { t.el.remove(); }, UNDO_MS);
+    btn.addEventListener('click', function () {
+      clearTimeout(timer);
+      t.el.remove();
+      Promise.all([store.putText(snap.book.id, snap.words), store.putBook(snap.book)])
+        .then(function (r) {
+          if (!r[0].durable || !r[1].durable) {
+            toast('').error('“' + snap.book.title + '” is back in the library, but this browser would not store it again. It will be gone when you reload.');
+          }
+          return renderLibrary();
+        });
+    });
+    t.el.appendChild(btn);
   }
 
   // ---------- Importing ----------
@@ -3008,7 +3155,7 @@
     setChaptersOpen(wantOpen && !!(R.book.chapters && R.book.chapters.length));
     renderPageView();
     el.pagepop.classList.remove('hidden');
-    el.ppClose.focus();
+    trapFocus(el.pagepop, el.ppClose);
   }
   // ---- Chapters ----
   // Which chapter is on screen. Cached against R.chapter so the DOM is only
@@ -3096,7 +3243,10 @@
   function closePageView() {
     PV.open = false;
     el.pagepop.classList.add('hidden');
-    el.play.focus();
+    // back to whatever opened it — the mini page, the P key, a long press —
+    // rather than always dumping the reader on the play button
+    releaseFocus(el.pagepop);
+    if (!el.pagepop.contains(document.activeElement) && document.activeElement === document.body) el.play.focus();
   }
   function renderPageView() {
     var total = R.book.pageStarts.length;
@@ -3408,7 +3558,14 @@
   function initServiceWorker() {
     if (!canUseServiceWorker()) return;
     var reloading = false;
+    // A brand-new worker calls clients.claim() on activate, which fires
+    // controllerchange on the FIRST visit too. Reloading there is wrong: there
+    // is no old version to swap out, so the reader just sees the page flash and
+    // reload for no reason. Only a genuine handover from an existing controller
+    // is an update worth reloading for.
+    var hadController = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!hadController) { hadController = true; return; }
       if (reloading) return;          // the new worker took over: pick it up once
       reloading = true;
       location.reload();
@@ -3547,7 +3704,26 @@
     if (w) { selectWordInView(parseInt(w.dataset.i, 10)); commitPageView(); }
   });
   el.pagepop.addEventListener('click', function (e) { if (e.target === el.pagepop) closePageView(); });
+  function openHelp() {
+    el.help.classList.remove('hidden');
+    trapFocus(el.help, el.helpClose);
+  }
+  function closeHelp() {
+    el.help.classList.add('hidden');
+    releaseFocus(el.help);
+  }
+  el.helpBtn.addEventListener('click', openHelp);
+  el.helpClose.addEventListener('click', closeHelp);
+  el.help.addEventListener('click', function (e) { if (e.target === el.help) closeHelp(); });
+
   document.addEventListener('keydown', function (e) {
+    // The trap runs first: while a modal is open, Tab must not escape it.
+    if (handleTrapTab(e)) return;
+    if (!el.help.classList.contains('hidden')) {
+      if (e.key === 'Escape') { e.preventDefault(); closeHelp(); }
+      return;
+    }
+    if (e.key === '?' && !/^(INPUT|TEXTAREA)$/.test((e.target.tagName || ''))) { e.preventDefault(); openHelp(); return; }
     if (confirmResolve) { if (e.key === 'Escape') { e.preventDefault(); settleConfirm(confirmCancelValue); } return; }
     if (el.reader.classList.contains('hidden')) {
       if (e.key === '/' && document.activeElement !== el.search) { e.preventDefault(); el.search.focus(); }
