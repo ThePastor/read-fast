@@ -44,7 +44,7 @@
 </style>
 </head>
 <body>
-<script>window.BUILD={v:'v23',date:'6 September 2026'};</script>
+<script>window.BUILD={v:'v24',date:'6 September 2026'};</script>
 
 
 <style>
@@ -1921,6 +1921,124 @@
   }
 
   // --- PDF ---
+  // ---------- Column-aware page ordering ----------
+  // pdf.js returns text items in the order the content stream draws them. A
+  // typeset two-column page draws line by line ACROSS the columns, so naive
+  // extraction yields "Column one line one. Column two line one. Column one
+  // line two." — every sentence cut in half by its neighbour.
+  //
+  // Reordering is OPT-IN. If no column gutter is found the original order is
+  // returned untouched, so single-column books, which already extract
+  // correctly, cannot regress on a heuristic.
+  var COL_GUTTER_MIN = 0.035;   // a gutter must be this wide, as a share of page width
+  var COL_LINE_TOL = 3;         // points; items within this sit on the same line
+
+  function findGutters(boxes, pageW) {
+    // Work LINE BY LINE. Judging coverage over the whole page fails on the very
+    // documents this is for: a heading spanning both columns bridges the gutter
+    // and hides it. Requiring most lines to leave the same vertical strip clear
+    // finds the real gutter without having to guess which items are headings —
+    // a heading only affects its own line, and is outvoted.
+    var BINS = 120, bin = pageW / BINS, i, t;
+    var lines = {}, count = 0;
+    for (i = 0; i < boxes.length; i++) {
+      var b = boxes[i];
+      if (!b.item.str || !b.item.str.trim()) continue;
+      var key = Math.round(b.y / 4);                  // items within ~4pt share a line
+      if (!lines[key]) { lines[key] = []; count++; }
+      lines[key].push(b);
+    }
+    if (count < 4) return [];                          // too little to judge
+
+    var clear = [], lo = BINS, hi = -1;
+    for (i = 0; i < BINS; i++) clear.push(0);
+    var keys = Object.keys(lines);
+    for (var k = 0; k < keys.length; k++) {
+      var cov = [];
+      for (i = 0; i < BINS; i++) cov.push(false);
+      var row = lines[keys[k]];
+      for (i = 0; i < row.length; i++) {
+        var a = Math.max(0, Math.floor(row[i].x / bin));
+        var z = Math.min(BINS - 1, Math.floor((row[i].x + row[i].w) / bin));
+        for (t = a; t <= z; t++) cov[t] = true;
+        if (a < lo) lo = a;
+        if (z > hi) hi = z;
+      }
+      for (t = 0; t < BINS; t++) if (!cov[t]) clear[t]++;
+    }
+    if (hi <= lo) return [];
+
+    var need = count * 0.8;                            // a gutter is clear on most lines
+    var gutters = [], run = -1;
+    for (var j = lo; j <= hi; j++) {
+      if (clear[j] >= need) { if (run < 0) run = j; continue; }
+      if (run >= 0) {
+        if ((j - run) * bin >= pageW * COL_GUTTER_MIN) gutters.push(((run + j) / 2) * bin);
+        run = -1;
+      }
+    }
+    return gutters;                                    // a run reaching hi is the right margin
+  }
+
+  function orderTextItems(items, pageW) {
+    if (!pageW || !items || items.length < 12) return items;
+    var boxes = [], i;
+    for (i = 0; i < items.length; i++) {
+      var it = items[i];
+      if (typeof it.str !== 'string') continue;
+      if (!it.transform) return items;                 // no geometry: do not guess
+      // pdf.js emits whitespace-only SPACER items, and between two columns one
+      // of them stretches right across the gutter. Treated as content it looks
+      // like a heading spanning both columns, and every single line then breaks
+      // the page into a new band — which is exactly the interleaving this
+      // function exists to remove. Whitespace carries no text and must not
+      // shape the layout; the extractor inserts its own separators anyway.
+      if (!it.str.trim()) continue;
+      boxes.push({ x: it.transform[4], y: it.transform[5], w: it.width || 0, item: it });
+    }
+    var gutters = findGutters(boxes, pageW);
+    if (!gutters.length) return items;                 // single column: leave it exactly as it was
+
+    // Top to bottom. An item spanning the columns — a heading, a rule — closes
+    // the band above it, so a heading never gets sorted into a column.
+    boxes.sort(function (a, b) { return b.y - a.y || a.x - b.x; });
+    var out = [], band = [];
+    function flush() {
+      if (!band.length) return;
+      var cols = [], c;
+      for (c = 0; c <= gutters.length; c++) cols.push([]);
+      for (c = 0; c < band.length; c++) {
+        var bx = band[c], mid = bx.x + bx.w / 2, n = 0;
+        while (n < gutters.length && mid > gutters[n]) n++;
+        cols[n].push(bx);
+      }
+      for (c = 0; c < cols.length; c++) {
+        cols[c].sort(function (a, b) {
+          return (Math.abs(a.y - b.y) <= COL_LINE_TOL) ? a.x - b.x : b.y - a.y;
+        });
+        for (var q = 0; q < cols[c].length; q++) out.push(cols[c][q].item);
+      }
+      band = [];
+    }
+    // An item spans the columns when it CROSSES a gutter — not when it happens
+    // to be wide. A width threshold misses a modest sub-heading that still sits
+    // across both columns, and it wrongly promotes a long line that does not.
+    // Crossing is also the semantically right test: a heading confined to one
+    // column's width really does belong to that column.
+    function spansColumns(b) {
+      for (var g = 0; g < gutters.length; g++) {
+        if (b.x < gutters[g] && b.x + b.w > gutters[g]) return true;
+      }
+      return false;
+    }
+    for (i = 0; i < boxes.length; i++) {
+      if (spansColumns(boxes[i])) { flush(); out.push(boxes[i].item); }
+      else band.push(boxes[i]);
+    }
+    flush();
+    return out;
+  }
+
   // Library exceptions are written for developers: "No password given",
   // "invalid distance too far back". Shown raw they tell a reader nothing about
   // what to DO. Each known failure gets a specific message and, where one
@@ -1981,8 +2099,11 @@
               return page.getTextContent({ disableCombineTextItems: false });
             }).then(function (tc) {
               var text = '';
-              for (var i = 0; i < tc.items.length; i++) {
-                var it = tc.items[i];
+              var pageW = 0;
+              try { pageW = page.getViewport({ scale: 1 }).width; } catch (e) {}
+              var ordered = orderTextItems(tc.items, pageW);
+              for (var i = 0; i < ordered.length; i++) {
+                var it = ordered[i];
                 if (typeof it.str !== 'string') continue;
                 text += it.str;
                 text += it.hasEOL ? '\n' : ' ';
