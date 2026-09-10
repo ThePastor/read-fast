@@ -1553,7 +1553,8 @@
     ['v16', 'A licence, terms of use and third-party notices published with the app.'],
     ['v15', 'Read Fast installs to your home screen and works with no connection at all.']
   ];
-  // Versions are 'v9' … 'v24': strip the v and compare as numbers.
+  // Versions are a 'v' and a number, so strip the v and compare numerically —
+  // 'v9' < 'v24' as numbers, the reverse of how strings sort.
   function verOf(v) { return parseInt(String(v).replace(/^v/i, ''), 10) || 0; }
   function newerThan(a, b) { return verOf(a) > verOf(b); }
 
