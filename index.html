@@ -51,8 +51,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230C0E12'/%3E%3Cpath d='M18 5L8 19h7l-1 9 10-14h-7z' fill='%23F5B331'/%3E%3C/svg%3E">
 <link rel="icon" type="image/png" sizes="48x48" href="./favicon.png">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" crossorigin="anonymous">
 <style>
   :root { color-scheme: dark; }
   html, body { margin: 0; padding: 0; background: #0C0E12; color: #F3F4F6; }
@@ -61,7 +61,7 @@
 </style>
 </head>
 <body>
-<script>window.BUILD={v:'v29',date:'2 November 2026'};</script>
+<script>window.BUILD={v:'v30',date:'2 November 2026'};</script>
 
 
 <style>
@@ -1761,6 +1761,7 @@
      release, in plain words, newest first. Trim the tail past a dozen — nobody
      reads further back than that. */
   var WHATS_NEW = [
+    ['v30', 'The natural voice reads straight through: it now runs on several processor cores where your browser allows, starts within a couple of seconds, plays sentence after sentence without gaps, and picks up at once when you resume.'],
     ['v29', 'Listen: Read Fast can now read your book aloud, in a natural voice that runs on your own device — your book never leaves it — or your device’s built-in voice. Choose from 0.75× to 2×, and the word on screen follows along.'],
     ['v28', 'The name at the foot of the page has changed from JohnsonXCorp to JohnsonX Labs. In British Columbia only an incorporated company may use \u201cCorp\u201d in its name, so the maker\u2019s name now follows the rules. Nothing else changed.'],
     ['v27', 'The JohnsonXCorp mark at the foot of the page now links to the JohnsonXCorp homepage, where you can find the other apps.'],
@@ -3517,6 +3518,7 @@
   }
   function closeBook() {
     if (L.speaking) listenPause();
+    dropPrepared();
     pause();
     letScreenSleep();
     saveProgress(true).then(function () {
@@ -4115,8 +4117,21 @@
   var LOAD_STALL_MS = 60000;     // no download progress for this long = stalled
   var LOAD_START_MS = 45000;     // the engine has to report SOMETHING by then
   var GEN_LIMIT_MS = 45000;      // one sentence taking longer than this = give up
-  var AHEAD = 3;                 // sentences prepared beyond the one being spoken
-  var WPM_AT_1X = 175;           // a fair starting guess until a real one is measured
+  var AHEAD = 3;                 // device voice: sentences queued beyond the one being spoken
+  var WPM_AT_1X = 175;           // device voice: a fair starting guess until a real one is measured
+  // Natural voice. Speech is made while earlier speech plays, so the voice never
+  // waits as long as the engine keeps ahead. The first phrase is short, so sound
+  // starts within a couple of seconds; each later one is sized to what can be
+  // made before the audio already prepared runs out, so the lead grows instead
+  // of the voice catching up and stopping.
+  var NAT_FIRST_WORDS = 10, NAT_MIN_WORDS = 10, NAT_MAX_WORDS = 28, NAT_SLOW_WORDS = 16;
+  var NAT_PREFETCH_SECS = 12;    // made in advance while the reader sits in Listen mode, paused
+  var NAT_WPS = 3.6;             // Kokoro's words per second at 1×, pauses included, measured
+  var NAT_SPEECH_WPS = 4.3;      // …and of speech alone, padding trimmed
+  var NAT_PAD = 0.75;            // seconds of silence Kokoro makes around every phrase at 1× — made, then trimmed
+  var NAT_AHEAD_SECS = 40;       // stop preparing once this much is ready to play
+  var NAT_AHEAD_MAX = 14;        // …or this many phrases
+  var NAT_MAX_ERRORS = 3;        // phrases in a row the engine may fail on before giving up
 
   var voicePrefs = { engine: '', natural: 'af_heart', device: '', speed: 1 };
   (function () {
@@ -4141,25 +4156,36 @@
   // voice again it would crash again, forever. So a flag is set before loading
   // and cleared after the first sentence is spoken; finding it still set on
   // launch means the last attempt died, and the natural voice waits to be asked.
-  var VOICE_CRASHED = false;
+  // v30: the engine runs on several processor cores where the browser allows it
+  // (see "cross-origin isolation" in the service worker). Several cores need
+  // more memory than one, so if a several-core attempt is the one that died,
+  // the retry uses one core — slower, but it runs.
+  var VOICE_CRASHED = false, VOICE_ONE_CORE = false;
   (function () {
     try {
-      if (localStorage.getItem('readfast:voice:loading')) {
+      var was = localStorage.getItem('readfast:voice:loading');
+      if (was) {
         localStorage.removeItem('readfast:voice:loading');
         localStorage.setItem('readfast:voice:crashed', '1');
+        if (/^mt/.test(was)) localStorage.setItem('readfast:voice:onecore', '1');
       }
       VOICE_CRASHED = localStorage.getItem('readfast:voice:crashed') === '1';
+      VOICE_ONE_CORE = localStorage.getItem('readfast:voice:onecore') === '1';
     } catch (e) {}
   })();
+  function manyCores() { return !!window.crossOriginIsolated && typeof SharedArrayBuffer === 'function' && !VOICE_ONE_CORE; }
   function naturalWasReady() {
     try { return localStorage.getItem('readfast:voice:ready') === '1'; } catch (e) { return false; }
   }
+  // measured separately for one core and several, which differ by about 2×
+  function rtfKey() { return 'readfast:voice:rtf:' + (manyCores() ? 'mt' : 'st'); }
   function savedRtf() {
-    try { var v = parseFloat(localStorage.getItem('readfast:voice:rtf')); return isFinite(v) ? v : 0; } catch (e) { return 0; }
+    try { var v = parseFloat(localStorage.getItem(rtfKey())); return isFinite(v) ? v : 0; } catch (e) { return 0; }
   }
   function naturalUnavailableReason() {
     if (inArtifactViewer) return 'This preview window blocks the download the natural voice needs. Open Read Fast at thepastor.github.io to use it.';
-    if (typeof WebAssembly !== 'object' || typeof Worker !== 'function' || typeof Blob !== 'function' || !window.URL) {
+    if (typeof WebAssembly !== 'object' || typeof Worker !== 'function' || typeof Blob !== 'function' || !window.URL ||
+        !(window.AudioContext || window.webkitAudioContext)) {
       return 'This browser cannot run the natural voice.';
     }
     return '';
@@ -4168,45 +4194,79 @@
   var L = {
     on: false,          // Listen mode is selected in the reader
     speaking: false,    // the voice is running, or getting ready to
-    epoch: 0,           // bumped on every stop; results from an older run are dropped
-    queue: [],          // prepared sentences, in order
-    nextStart: 0,       // where the next sentence to prepare begins
-    current: null,      // the sentence being spoken now
-    waiting: false,     // the voice has caught up with the engine
+    epoch: 0,           // bumped when prepared speech is thrown away; older results are dropped
+    queue: [],          // phrases sent to the engine and not yet heard, in order
+    nextStart: 0,       // where the next phrase to prepare begins
+    current: null,      // the phrase being spoken now
+    waiting: false,     // nothing is ready to play yet — the voice is waiting for the engine
+    started: false,     // natural voice: sound has played since play was pressed
+    playhead: 0,        // natural voice: audio-clock time when everything scheduled ends
+    timer: 0,
+    kept: null,         // natural voice, paused: what was prepared, to resume from at once
+    hist: [],           // natural voice: the last few phrases heard, kept for a skip back
     raf: 0,
-    rtf: [],            // seconds to prepare ÷ seconds of speech, natural voice
+    rtf: [],            // natural voice: seconds to make ÷ seconds of audio made (recent phrases)
+    speechWps: NAT_SPEECH_WPS, pad: NAT_PAD,   // natural voice, measured as it goes, at 1×
     words1x: 0, secs1x: 0   // speech measured so far, normalised to 1×
   };
   var N = { worker: null, state: 'idle', pct: 0, error: '', waiters: [],
-            inflight: 0, genTimer: 0, stallTimer: 0, seq: 0,
+            inflight: 0, genTimer: 0, stallTimer: 0, seq: 0, errors: 0,
+            threads: 0,        // processor cores the engine reported it is using
+            single: false,     // this load was asked to use one core
             proven: false };   // a sentence has been made this session — memory is known to suffice
-  function guardOn() { if (!N.proven) { try { localStorage.setItem('readfast:voice:loading', String(Date.now())); } catch (e) {} } }
+  function guardOn() { if (!N.proven) { try { localStorage.setItem('readfast:voice:loading', (N.single ? 'st:' : 'mt:') + Date.now()); } catch (e) {} } }
   function guardOff() { try { localStorage.removeItem('readfast:voice:loading'); } catch (e) {} }
 
   // ---- the worker: Kokoro runs here, off the main thread, so the page stays
   // responsive while a sentence is being synthesised (a second or more of solid
   // CPU each). Kept as a string because the app is one file; it becomes a
   // module Worker through a Blob URL.
+  //
+  // v30: on a page that is cross-origin isolated (the service worker arranges
+  // it) the engine's WebAssembly runtime spreads each sentence over up to four
+  // cores — measured 2.2× faster than one. Asked for one core, the worker hides
+  // the isolation from the runtime, which then picks one on its own.
+  // After loading it says one throwaway word: the first sentence an engine
+  // makes is slow (compiling, allocating), and that cost belongs here, not in
+  // front of the reader's first sentence.
+  // Every sentence comes back with its silence trimmed: Kokoro pads each with
+  // about 0.3 s before and 0.5 s after, which between sentences added up to
+  // nearly a second of dead air. The pause between sentences is put back on
+  // this side, sized to the punctuation.
   var VOICE_WORKER_SRC = [
     "let tts = null;",
     "self.onmessage = async (e) => {",
     "  const m = e.data;",
     "  if (m.type === 'load') {",
     "    try {",
+    "      if (m.single) { try { Object.defineProperty(self, 'crossOriginIsolated', { value: false, configurable: true }); } catch (err) {} }",
     "      const { KokoroTTS } = await import(m.url);",
     "      postMessage({ type: 'progress', file: 'engine' });",
     "      tts = await KokoroTTS.from_pretrained(m.model, { dtype: 'q8', device: 'wasm',",
     "        progress_callback: (p) => { if (p && p.status === 'progress') postMessage({ type: 'progress', file: String(p.file || ''), loaded: p.loaded || 0, total: p.total || 0 }); } });",
-    "      postMessage({ type: 'ready' });",
+    "      postMessage({ type: 'progress', file: 'warm' });",
+    "      const t0 = performance.now();",
+    "      await tts.generate('Ready.', { voice: m.voice || 'af_heart', speed: 1 });",
+    "      const iso = !!self.crossOriginIsolated && typeof SharedArrayBuffer === 'function';",
+    "      postMessage({ type: 'ready', threads: iso ? Math.min(4, Math.ceil((navigator.hardwareConcurrency || 1) / 2)) : 1, warmMs: performance.now() - t0 });",
     "    } catch (err) { postMessage({ type: 'error', stage: 'load', message: String((err && err.message) || err) }); }",
     "  } else if (m.type === 'gen') {",
     "    try {",
     "      const t0 = performance.now();",
     "      const a = await tts.generate(m.text, { voice: m.voice, speed: m.speed });",
-    // copied, never transferred in place: the model's own output may be a view
-    // into the engine's memory, and detaching that would break the next sentence
-    "      const samples = new Float32Array(a.audio);",
-    "      postMessage({ type: 'audio', id: m.id, samples, rate: a.sampling_rate, ms: performance.now() - t0 }, [samples.buffer]);",
+    "      const A = a.audio, rate = a.sampling_rate, T = 0.004;",
+    "      let f = 0, l = A.length - 1;",
+    "      while (f < A.length && Math.abs(A[f]) < T) f++;",
+    "      while (l > f && Math.abs(A[l]) < T) l--;",
+    "      const s0 = Math.max(0, f - Math.round(rate * 0.03));",
+    "      const s1 = f < A.length ? Math.min(A.length, l + 1 + Math.round(rate * 0.06)) : s0;",
+    // a copy (slice), never the model's own array transferred in place: that
+    // may be a view into the engine's memory, and detaching it would break the
+    // next sentence
+    "      const samples = A.slice(s0, s1);",
+    "      const fz = Math.min(samples.length >> 1, Math.round(rate * 0.006));",
+    "      for (let i = 0; i < fz; i++) { const g = i / fz; samples[i] *= g; samples[samples.length - 1 - i] *= g; }",
+    "      postMessage({ type: 'audio', id: m.id, samples, rate, raw: A.length / rate, ms: performance.now() - t0 }, [samples.buffer]);",
     "    } catch (err) { postMessage({ type: 'error', stage: 'gen', id: m.id, message: String((err && err.message) || err) }); }",
     "  }",
     "};"
@@ -4219,21 +4279,38 @@
     var p = new Promise(function (res, rej) { N.waiters.push([res, rej]); });
     if (N.state === 'loading') return p;
     N.state = 'loading'; N.pct = 0; N.error = '';
+    startWorker(!manyCores());
+    renderVoicePanel();
+    return p;
+  }
+  function startWorker(single) {
+    N.single = single; N.threads = 0;
     guardOn();
     try {
       var url = URL.createObjectURL(new Blob([VOICE_WORKER_SRC], { type: 'text/javascript' }));
       N.worker = new Worker(url, { type: 'module' });
       N.worker.onmessage = onNaturalMessage;
       N.worker.onerror = function (e) {
-        naturalFail('The voice engine failed to start' + (e && e.message ? ' (' + e.message + ').' : '.'));
+        loadFailed('The voice engine failed to start' + (e && e.message ? ' (' + e.message + ').' : '.'));
       };
-      N.worker.postMessage({ type: 'load', url: KOKORO_URL, model: KOKORO_MODEL });
+      N.worker.postMessage({ type: 'load', url: KOKORO_URL, model: KOKORO_MODEL, single: single, voice: voicePrefs.natural });
       armStall(LOAD_START_MS);
     } catch (e) {
       naturalFail('The voice engine could not start in this browser.');
     }
-    renderVoicePanel();
-    return p;
+  }
+  // A several-core load that fails gets one more go on one core before the
+  // reader hears about it; if that works, one core it is on this device.
+  function loadFailed(msg) {
+    if (N.state === 'loading' && !N.single) {
+      clearTimeout(N.stallTimer);
+      if (N.worker) { try { N.worker.terminate(); } catch (e) {} }
+      N.worker = null;
+      N.retriedOneCore = true;
+      startWorker(true);
+      return;
+    }
+    naturalFail(msg);
   }
   function armStall(ms) {
     clearTimeout(N.stallTimer);
@@ -4250,7 +4327,8 @@
   function unloadNatural() {
     clearTimeout(N.stallTimer); clearTimeout(N.genTimer);
     if (N.worker) { try { N.worker.terminate(); } catch (e) {} }
-    N.worker = null; N.inflight = 0;
+    N.worker = null; N.inflight = 0; N.retriedOneCore = false;
+    dropPrepared();          // anything still being made died with the worker
     if (N.state !== 'error') N.state = 'idle';
     settleWaiters(new Error('stopped'));
   }
@@ -4271,16 +4349,25 @@
     } else if (m.type === 'ready') {
       clearTimeout(N.stallTimer);
       N.state = 'ready'; N.pct = 100;
-      guardOff();      // loaded; the first sentence arms it again
+      N.threads = m.threads || 1;
+      if (N.single && N.retriedOneCore) {
+        VOICE_ONE_CORE = true;
+        try { localStorage.setItem('readfast:voice:onecore', '1'); } catch (e) {}
+      }
+      N.retriedOneCore = false;
+      // Loading includes a first sentence now, so a load that got this far
+      // proves memory suffices; the guard has done its job.
+      clearCrashGuard();
       try { localStorage.setItem('readfast:voice:ready', '1'); } catch (e) {}
       settleWaiters(null);
       renderVoicePanel();
       pumpNatural();
+      prefetchIdle();
     } else if (m.type === 'audio') {
       onNaturalAudio(m);
     } else if (m.type === 'error') {
-      if (m.stage === 'load') naturalFail('The natural voice could not be loaded: ' + m.message);
-      else { if (m.id === N.inflight) { clearTimeout(N.genTimer); N.inflight = 0; } naturalFail('The natural voice stopped: ' + m.message); }
+      if (m.stage === 'load') loadFailed('The natural voice could not be loaded: ' + m.message);
+      else onNaturalGenError(m);
     }
   }
 
@@ -4302,18 +4389,67 @@
   function chunkOf(a, b) {
     var ws = R.words.slice(a, b), cum = [], t = 0;
     for (var i = 0; i < ws.length; i++) { t += speechWeight(ws[i]); cum.push(t); }
-    return { a: a, b: b, text: ws.join(' '), cum: cum, total: t, ready: false, sent: false, url: null, dur: 0, id: 0, epoch: L.epoch };
+    return { a: a, b: b, text: spoken(ws, b), cum: cum, total: t, ready: false, sent: false, url: null, dur: 0, id: 0, epoch: L.epoch };
   }
-  function makeChunk(a, cap) {
-    var words = R.words, n = words.length, i = a, soft = -1;
-    while (i < n && i - a < cap) {
-      var core = words[i].replace(/["'”’)\]]+$/, '');
-      i++;
-      if (i - a >= 3 && /[.!?…]$/.test(core)) return chunkOf(a, i);
-      if (i - a >= cap / 2 && /[,;:—–]$/.test(core)) soft = i;
+  // Chapters read like chapters: a phrase never runs from one into the next,
+  // the heading is said on its own as a heading, and there is a real pause
+  // either side of it. Worked out once per book, from its chapter list.
+  var BOUNDS = { book: null, at: {} };
+  function bounds() {
+    if (BOUNDS.book === R.book) return BOUNDS.at;
+    var at = {}, ch = (R.book && R.book.chapters) || [];
+    var norm = function (w) { return String(w).toLowerCase().replace(/[^a-z0-9]/g, ''); };
+    ch.forEach(function (c) {
+      if (!(c.start >= 0)) return;
+      if (c.start > 0) at[c.start] = 1.1;                     // end of the previous chapter
+      // the heading, if the chapter's text opens with it
+      var tw = String(c.title || '').split(/\s+/).map(norm).filter(Boolean);
+      if (!tw.length || tw.length > 14) return;
+      for (var k = 0; k < tw.length; k++) if (norm(R.words[c.start + k] || '') !== tw[k]) return;
+      at[c.start + tw.length] = 0.7;                          // after the heading
+    });
+    BOUNDS.book = R.book; BOUNDS.at = at;
+    return at;
+  }
+  // The text the voice is given: superscript footnote marks (common in PDFs)
+  // dropped, and a phrase that ends at a chapter edge without punctuation
+  // ("Chapter Three The Storm") given a full stop, so it is said as a heading
+  // rather than run into the first sentence.
+  function spoken(ws, b) {
+    var t = ws.join(' ').replace(/[\u00B9\u00B2\u00B3\u2070-\u2079]+/g, '');
+    if (bounds()[b] && !/[.!?…:;,]["'”’)\]]*$/.test(t)) t += '.';
+    return t;
+  }
+  // Where a phrase ends. Every word boundary up to the most allowed is
+  // scored: distance from the target, plus a cost for the kind of
+  // break — none for a full stop, a little for a comma, more for no
+  // punctuation, most for ending on a word that leads into the next ("the best
+  // of" | "times" sounds broken in a way "the best" | "of times" does not).
+  // So phrases come out near the length asked for, and end where a reader
+  // would pause.
+  var WEAK_END = /^(a|an|the|of|to|in|on|at|by|for|with|from|into|and|or|but|nor|that|as|than|is|was|are|were|be|his|her|its|their|my|your|our|this|these|those|very|so|not|no)$/i;
+  var NOT_AN_END = /^(Mr|Mrs|Ms|Dr|St|Jr|Sr|Prof|Mt|Capt|Col|Gen|Lt|Sgt|Rev|Hon|vs|etc|No|Vol|Ch|pp?|[A-Z])\.$/;
+  function breakCost(w, last) {
+    if (last) return 0;
+    var core = w.replace(/["'”’)\]]+$/, '');
+    if (/[.!?…]$/.test(core)) return NOT_AN_END.test(core.replace(/^["'“‘(\[]+/, '')) ? 1.05 : 0;
+    if (/[,;:—–]$/.test(core)) return 0.25;
+    return WEAK_END.test(core.replace(/[^A-Za-z']/g, '')) ? 1.3 : 1.05;
+  }
+  function makeChunk(a, cap, max) {
+    var words = R.words, n = words.length, lim = Math.min(n, a + Math.max(3, max || Math.ceil(cap * 1.5)));
+    var edge = bounds();
+    for (var e = a + 1; e < lim; e++) if (edge[e]) { lim = e; break; }   // never across a chapter edge
+    var best = -1, bestScore = Infinity;
+    for (var i = a + 1; i <= lim; i++) {
+      var len = i - a, last = i === n || !!edge[i];
+      if (len < 3 && !last) continue;
+      // short of the target costs more than past it: short phrases are the
+      // expensive ones to make (see nextCap)
+      var score = (len < cap ? 1.5 * (cap - len) : len - cap) / cap + breakCost(words[i - 1], last);
+      if (score < bestScore) { bestScore = score; best = i; }
     }
-    if (i < n && soft > 0) i = soft;
-    return chunkOf(a, i);
+    return chunkOf(a, best > a ? best : Math.min(n, a + cap));
   }
   function fillQueue() {
     while (L.queue.length < AHEAD + 1 && L.nextStart < R.words.length) {
@@ -4329,79 +4465,58 @@
     L.secs1x += seconds * voicePrefs.speed;
   }
   function listenWpm() {
-    var base = L.secs1x > 20 ? (L.words1x / L.secs1x) * 60 : WPM_AT_1X;
+    var base = L.secs1x > 20 ? (L.words1x / L.secs1x) * 60
+             : voicePrefs.engine === 'natural' ? NAT_WPS * 60 : WPM_AT_1X;
     return Math.round(base * voicePrefs.speed);
   }
 
-  // ---- natural voice: generation
-  function pumpNatural() {
-    if (!L.speaking || voicePrefs.engine !== 'natural' || N.state !== 'ready' || N.inflight || !N.worker) return;
-    fillQueue();
-    var c = null;
-    for (var i = 0; i < L.queue.length; i++) if (!L.queue[i].sent) { c = L.queue[i]; break; }
-    if (!c) return;
-    c.sent = true; c.id = ++N.seq; c.epoch = L.epoch;
-    N.inflight = c.id;
-    guardOn();
-    clearTimeout(N.genTimer);
-    N.genTimer = setTimeout(function () {
-      naturalFail('This device took too long to prepare a sentence, so the natural voice stopped. The device voice will play without the wait.');
-    }, GEN_LIMIT_MS);
-    N.worker.postMessage({ type: 'gen', id: c.id, text: c.text, voice: voicePrefs.natural, speed: voicePrefs.speed });
+  // ---- natural voice: the audio clock
+  // Web Audio, not an <audio> element: each phrase is scheduled to start on the
+  // exact sample the one before it ends (plus the pause its punctuation earns),
+  // so there is no gap of the element loading the next file. v29 used an
+  // element because iOS mutes Web Audio when the ring/silent switch is on;
+  // iOS 16.4 and later let a page say it is playing media
+  // (navigator.audioSession.type = 'playback'), which lifts that, and for older
+  // iOS a silent looping element does the same job.
+  var AC = null, keeper = null, keeperUrl = null, previewSrc = null;
+  var OLD_IOS = !navigator.audioSession && (/iP(hone|od|ad)/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+  function audioCtx() {
+    if (AC) return AC;
+    var C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return null;
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    try { AC = new C({ latencyHint: 'playback' }); } catch (e) { try { AC = new C(); } catch (e2) { return null; } }
+    try {
+      AC.addEventListener('statechange', function () {
+        // a phone call, Siri, another app taking the speaker
+        if (AC.state === 'interrupted' && L.speaking && voicePrefs.engine === 'natural') listenPause();
+      });
+    } catch (e) {}
+    return AC;
   }
-  function onNaturalAudio(m) {
-    if (m.id === N.inflight) { clearTimeout(N.genTimer); N.inflight = 0; }
-    var c = null, i;
-    for (i = 0; i < L.queue.length; i++) if (L.queue[i].id === m.id) { c = L.queue[i]; break; }
-    if (m.id === PREVIEW.id) { playPreviewAudio(m); pumpNatural(); return; }
-    if (c && c.epoch === L.epoch && L.speaking) {
-      var dur = m.samples.length / m.rate;
-      c.url = URL.createObjectURL(wavBlob(m.samples, m.rate));
-      c.dur = dur; c.ready = true;
-      recordRtf(m.ms, dur);
-      noteSpoken(c, dur);
-      // The first real sentence from this engine on this device means it can
-      // load AND run here; the crash guard has done its job.
-      clearCrashGuard();
-      if (L.waiting && L.queue[0] === c) playChunk();
-    }
-    pumpNatural();
+  // Inside the tap: iOS lets sound start only from a user gesture.
+  function unlockAudio() {
+    var ac = audioCtx();
+    if (!ac) return;
+    try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) {}
+    try { var p = ac.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    try { var s = ac.createBufferSource(); s.buffer = ac.createBuffer(1, 1, 22050); s.connect(ac.destination); s.start(0); } catch (e) {}
+    keepAudioAwake(true);
   }
-  function recordRtf(ms, dur) {
-    if (dur < 0.4) return;
-    L.rtf.push(ms / 1000 / dur);
-    if (L.rtf.length > 8) L.rtf.shift();
-    var sorted = L.rtf.slice().sort(function (a, b) { return a - b; });
-    var med = sorted[Math.floor(sorted.length / 2)];
-    try { localStorage.setItem('readfast:voice:rtf', med.toFixed(3)); } catch (e) {}
-  }
-  function clearCrashGuard() {
-    N.proven = true;
-    try { localStorage.removeItem('readfast:voice:loading'); localStorage.removeItem('readfast:voice:crashed'); } catch (e) {}
-    VOICE_CRASHED = false;
-  }
-
-  // ---- natural voice: playback
-  // One <audio> element for the whole session. A media element rather than Web
-  // Audio because iOS mutes Web Audio when the ring/silent switch is on, but
-  // lets a media element through — a reader with the phone on silent still
-  // hears the book. iOS also only lets a page start sound inside a tap, and the
-  // first sentence takes a moment to prepare, so the element is unlocked with a
-  // tenth of a second of silence during the tap itself.
-  var voiceAudio = null, primerUrl = null;
-  function audioEl() {
-    if (!voiceAudio) {
-      voiceAudio = new Audio();
-      voiceAudio.preload = 'auto';
-      voiceAudio.addEventListener('ended', onChunkEnded);
-    }
-    return voiceAudio;
-  }
-  function primeAudio() {
-    var a = audioEl();
-    if (!primerUrl) primerUrl = URL.createObjectURL(wavBlob(new Float32Array(2400), 24000));
-    a.src = primerUrl;
-    try { var p = a.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+  function keepAudioAwake(on) {
+    if (!OLD_IOS) return;
+    try {
+      if (on) {
+        if (!keeper) {
+          keeper = new Audio();
+          keeper.loop = true;
+          keeperUrl = URL.createObjectURL(wavBlob(new Float32Array(24000), 24000));
+          keeper.src = keeperUrl;
+        }
+        var p = keeper.play(); if (p && p.catch) p.catch(function () {});
+      } else if (keeper) keeper.pause();
+    } catch (e) {}
   }
   function wavBlob(samples, rate) {
     var n = samples.length, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
@@ -4416,37 +4531,267 @@
     }
     return new Blob([buf], { type: 'audio/wav' });
   }
-  function playChunk() {
-    if (!L.speaking) return;
-    var c = L.queue[0];
-    if (!c) { listenFinished(); return; }
-    if (!c.ready) { L.waiting = true; renderListenStatus(); pumpNatural(); return; }
-    L.waiting = false;
-    L.queue.shift();
-    L.current = c;
-    var a = audioEl();
-    a.src = c.url;
-    try {
-      var p = a.play();
-      if (p && p.catch) p.catch(function (err) {
-        if (!L.speaking) return;
-        if (err && err.name === 'NotAllowedError') stopWithMessage('Tap play to start the voice.');
-      });
-    } catch (e) {}
-    moveTo(c.a, true);
-    renderListenStatus();
-    startSync();
+  function toBuffer(samples, rate) {
+    if (!samples.length) return null;
+    var b = audioCtx().createBuffer(1, samples.length, rate);
+    if (b.copyToChannel) b.copyToChannel(samples, 0); else b.getChannelData(0).set(samples);
+    return b;
+  }
+  // what the listener hears lags the clock by the output latency
+  function heardTime() {
+    var lat = AC.outputLatency || AC.baseLatency || 0;
+    return AC.currentTime - Math.min(0.3, Math.max(0, lat));
+  }
+  // the pause after a phrase, by how it ends
+  // The pause after a phrase, by how it ends — the lengths a narrator leaves:
+  // a beat at a comma, a breath at a full stop, longer at a chapter.
+  function phrasePause(c) {
+    var w = (R.words[c.b - 1] || '').replace(/["'”’)\]]+$/, ''), end = w.slice(-1);
+    var s = bounds()[c.b] || (/[.!?…]/.test(end) && !NOT_AN_END.test(w) ? 0.42 : /[;:]/.test(end) ? 0.28 : /[,—–]/.test(end) ? 0.2 : 0.05);
+    return s / voicePrefs.speed;
+  }
+  function median(xs) { var s = xs.slice().sort(function (a, b) { return a - b; }); return s[Math.floor(s.length / 2)]; }
+  // The engine's speed: seconds to make ÷ seconds of audio it made. Measured
+  // against everything it made, padding included, because making the padding
+  // costs the same as making speech — about 0.6 s of work per phrase whatever
+  // its length, which is why short phrases cost proportionally more.
+  function currentRtf() {
+    if (L.rtf.length) return median(L.rtf);
+    return savedRtf() || (manyCores() ? 0.85 : 1.7);
+  }
+  // seconds of speech prepared and not yet heard
+  function readyAhead() {
+    var t = 0, now = AC ? AC.currentTime : 0;
+    if (L.playhead > now) t += L.playhead - now;
+    for (var i = 0; i < L.queue.length; i++) { var c = L.queue[i]; if (c.ready && !c.src) t += c.dur; }
+    return t;
+  }
+
+  // ---- natural voice: generation
+  // How long the next phrase can be: as much as the engine can make before the
+  // speech already prepared runs out. On a device too slow to keep up at all,
+  // every phrase is followed by a wait of (RTF − 1) × its length, so phrases
+  // are kept to a middling, even length: short waits, mostly where the
+  // punctuation would pause anyway, rather than a long one now and then.
+  // Returns [the length to aim for, the most it may be].
+  function nextCap() {
+    if (!L.started && !L.queue.length) return [NAT_FIRST_WORDS, 15];
+    var r = currentRtf(), sp = voicePrefs.speed, wps = L.speechWps * sp;
+    if (r >= 0.97) return [NAT_SLOW_WORDS, 20];
+    // Because of the padding, a phrase shorter than this costs more time to
+    // make than it takes to say — a run of them can never get ahead:
+    var even = (r * L.pad / sp - 0.25) / (1 - r) * wps;
+    var least = Math.max(NAT_MIN_WORDS, Math.min(NAT_MAX_WORDS, Math.ceil(even * 1.3)));
+    // the longest phrase whose cost fits in what is left to play, with a margin
+    var fit = Math.min(NAT_MAX_WORDS, Math.floor(((readyAhead() - 0.35) / r - L.pad / sp) * wps));
+    var room = Math.min(NAT_MAX_WORDS, Math.ceil(least * 1.2));
+    if (fit < least) return [least, room];
+    return [fit, Math.max(fit, room)];
+  }
+  function pumpNatural() {
+    if (!(L.speaking || L.kept) || voicePrefs.engine !== 'natural' || N.state !== 'ready' || N.inflight || !N.worker) return;
+    if (L.nextStart >= R.words.length) return;
+    // enough is ready: stop, and save the battery; finishing a phrase asks again
+    if (L.queue.length >= NAT_AHEAD_MAX || readyAhead() >= (L.speaking ? NAT_AHEAD_SECS : NAT_PREFETCH_SECS)) return;
+    var cap = nextCap(), c = makeChunk(L.nextStart, cap[0], cap[1]);
+    L.queue.push(c);
+    L.nextStart = c.b;
+    c.sent = true; c.id = ++N.seq; c.epoch = L.epoch;
+    c.voice = voicePrefs.natural; c.speed = voicePrefs.speed;
+    N.inflight = c.id;
+    guardOn();
+    clearTimeout(N.genTimer);
+    N.genTimer = setTimeout(function () {
+      naturalFail('This device took too long to prepare a sentence, so the natural voice stopped. The device voice will play without the wait.');
+    }, GEN_LIMIT_MS);
+    N.worker.postMessage({ type: 'gen', id: c.id, text: c.text, voice: c.voice, speed: c.speed });
+  }
+  function findChunk(id) {
+    for (var i = 0; i < L.queue.length; i++) if (L.queue[i].id === id) return L.queue[i];
+    return null;
+  }
+  function onNaturalAudio(m) {
+    if (m.id === N.inflight) { clearTimeout(N.genTimer); N.inflight = 0; }
+    if (m.id === PREVIEW.id) { playPreviewAudio(m); pumpNatural(); return; }
+    var c = findChunk(m.id);
+    if (c && c.epoch === L.epoch && (L.speaking || L.kept)) {
+      c.buf = toBuffer(m.samples, m.rate);
+      c.speech = m.samples.length / m.rate;
+      c.gap = phrasePause(c);
+      c.dur = c.speech + c.gap;
+      c.ready = true;
+      N.errors = 0;
+      var raw = m.raw || c.speech;
+      recordRtf(m.ms, raw);
+      if (c.speech > 0.8) {
+        var sp = voicePrefs.speed, n = c.b - c.a;
+        L.speechWps = 0.8 * L.speechWps + 0.2 * (n / (c.speech * sp));
+        L.pad = 0.8 * L.pad + 0.2 * Math.max(0, Math.min(2, (raw - c.speech) * sp));
+      }
+      noteSpoken(c, c.dur);
+      if (!N.proven) clearCrashGuard();
+      schedule();
+    }
     pumpNatural();
   }
-  function onChunkEnded() {
-    if (!L.speaking || voicePrefs.engine !== 'natural') return;
-    var c = L.current;
-    if (!c) { playChunk(); return; }          // the silent primer finished first
-    if (c.url) URL.revokeObjectURL(c.url);
-    L.current = null;
-    moveTo(c.b, true);
-    if (R.idx >= R.words.length) { listenFinished(); return; }
-    playChunk();
+  // One phrase the engine cannot say (a run of symbols, say) is skipped, not
+  // the end of the book. Several in a row means the engine itself is broken.
+  function onNaturalGenError(m) {
+    if (m.id === N.inflight) { clearTimeout(N.genTimer); N.inflight = 0; }
+    if (m.id === PREVIEW.id) { PREVIEW.id = 0; PREVIEW.playing = false; renderVoiceActions(); return; }
+    if (++N.errors >= NAT_MAX_ERRORS) { naturalFail('The natural voice stopped: ' + m.message); return; }
+    var c = findChunk(m.id);
+    if (c && c.epoch === L.epoch) { c.buf = null; c.speech = 0; c.gap = 0.3; c.dur = 0.3; c.ready = true; schedule(); }
+    pumpNatural();
+  }
+  function recordRtf(ms, dur) {
+    if (!(dur >= 0.4)) return;
+    L.rtf.push(ms / 1000 / dur);
+    if (L.rtf.length > 8) L.rtf.shift();
+    try { localStorage.setItem(rtfKey(), median(L.rtf).toFixed(3)); } catch (e) {}
+  }
+  function clearCrashGuard() {
+    N.proven = true;
+    try { localStorage.removeItem('readfast:voice:loading'); localStorage.removeItem('readfast:voice:crashed'); } catch (e) {}
+    VOICE_CRASHED = false;
+  }
+
+  // ---- natural voice: playback
+  // Every phrase that is ready is scheduled as soon as it is ready, back to
+  // back, so the audio hardware plays them continuously. tick() keeps the
+  // book's position in step, and notices if the engine has fallen behind.
+  function schedule() {
+    if (!L.speaking || voicePrefs.engine !== 'natural' || !AC) return;
+    var now = AC.currentTime;
+    if (L.waiting) {
+      var head = L.queue[0];
+      if (!head || !head.ready) return;
+      L.waiting = false;
+      L.playhead = now + 0.06;
+      renderListenStatus();
+    }
+    for (var i = 0; i < L.queue.length; i++) {
+      var c = L.queue[i];
+      if (c.src) continue;
+      if (!c.ready) break;
+      var at = Math.max(L.playhead, now + 0.03);
+      c.t0 = at; c.t1 = at + c.dur;
+      if (c.buf) {
+        var s = AC.createBufferSource();
+        s.buffer = c.buf;
+        s.connect(AC.destination);
+        s.onended = tick;
+        s.start(at);
+        c.src = s;
+      } else c.src = true;          // nothing to say; its pause still counts
+      L.playhead = c.t1;
+      L.started = true;
+    }
+    armTick();
+    startSync();
+  }
+  function armTick() {
+    clearTimeout(L.timer);
+    if (!L.speaking || !AC) return;
+    var head = L.queue[0], next = head && head.src ? head.t0 + head.speech : L.playhead;
+    L.timer = setTimeout(tick, Math.max(30, (next - AC.currentTime) * 1000 + 20));
+  }
+  function tick() {
+    if (!L.speaking || voicePrefs.engine !== 'natural' || !AC) return;
+    var now = heardTime();
+    // phrases whose speech is over: the book moves on past them
+    while (L.queue.length && L.queue[0].src && now >= L.queue[0].t0 + L.queue[0].speech - 0.01) {
+      var c = L.queue.shift();
+      L.hist.push(c);
+      if (L.hist.length > 3) L.hist.shift().buf = null;
+      L.current = null;
+      moveTo(c.b, true);
+      if (R.idx >= R.words.length) { listenFinished(); return; }
+    }
+    L.current = L.queue[0] && L.queue[0].src ? L.queue[0] : null;
+    if (!L.waiting && !L.current && AC.currentTime >= L.playhead - 0.02) {
+      // played everything that was ready: the engine is behind
+      L.waiting = true;
+      renderListenStatus();
+    }
+    pumpNatural();
+    armTick();
+  }
+  // Pausing keeps what is already prepared (and stops the sound), so play
+  // starts again at once from the phrase that was speaking — not after
+  // another wait for the engine.
+  function keepPrepared() {
+    clearTimeout(L.timer);
+    var q = L.queue.filter(function (c) { return c.epoch === L.epoch; });
+    q.forEach(function (c) {
+      if (c.src && c.src !== true) { try { c.src.onended = null; c.src.stop(); } catch (e) {} }
+      c.src = null; c.t0 = c.t1 = 0;
+    });
+    L.playhead = 0;          // nothing is scheduled now; what is ready is counted by readyAhead()
+    L.kept = q.length ? { book: R.book, at: q[0].a, voice: voicePrefs.natural, speed: voicePrefs.speed } : null;
+    return L.kept ? L.kept.at : -1;
+  }
+  // Sitting in Listen mode, paused, with the engine loaded: make the first few
+  // seconds from where play will start, so pressing play starts at once and
+  // with a lead the engine can stay ahead of. Moving, or changing the speed
+  // or voice, throws it away and starts again (after a moment, so a run of
+  // skips does not start a run of phrases).
+  function prefetchIdle() {
+    clearTimeout(L.prefetchTimer);
+    L.prefetchTimer = setTimeout(function () {
+      if (L.speaking || !L.on || !R.book || voicePrefs.engine !== 'natural' || N.state !== 'ready' || R.idx >= R.words.length) return;
+      var at = R.rewindArmed ? resumePoint(R.idx) : R.idx;
+      if (!(L.kept && L.kept.book === R.book && L.kept.at === at && L.kept.voice === voicePrefs.natural &&
+            L.kept.speed === voicePrefs.speed && L.queue.length && L.queue[0].a === at)) {
+        dropPrepared();
+        L.nextStart = at; L.started = false;
+        L.kept = { book: R.book, at: at, voice: voicePrefs.natural, speed: voicePrefs.speed };
+      }
+      pumpNatural();
+    }, 500);
+  }
+  function dropPrepared() {
+    clearTimeout(L.timer); clearTimeout(L.prefetchTimer);
+    L.queue.forEach(function (c) { if (c.src && c.src !== true) { try { c.src.onended = null; c.src.stop(); } catch (e) {} } c.buf = null; });
+    L.hist.forEach(function (c) { c.buf = null; });
+    L.queue = []; L.hist = []; L.kept = null; L.current = null; L.playhead = 0;
+    L.epoch++;
+  }
+  // A skip lands on a phrase that is already made, when one starts near
+  // enough to the word skipped to: the nearest phrase start in the direction
+  // of the skip, among those prepared and the last few heard (kept for this).
+  // Instant, and it starts where a sentence or clause starts, as a narrator
+  // would go back. Returns false when nothing prepared fits; the caller then
+  // starts over from the exact word.
+  function skipWithinPrepared(i) {
+    if (voicePrefs.engine !== 'natural' || !(L.speaking || L.kept) || N.state !== 'ready') return false;
+    var ready = [];
+    for (var q = 0; q < L.queue.length && L.queue[q].ready; q++) ready.push(L.queue[q]);
+    var list = L.hist.concat(ready), k = -1, best = 31, j;
+    for (j = 0; j < list.length; j++) {
+      var a = list[j].a;
+      if (i < R.idx ? a >= R.idx : a <= R.idx) continue;
+      if (Math.abs(a - i) < best) { best = Math.abs(a - i); k = j; }
+    }
+    if (k < 0 || !list[k].buf && list[k].speech) return false;
+    list.concat(L.queue).forEach(function (c) {
+      if (c.src && c.src !== true) { try { c.src.onended = null; c.src.stop(); } catch (e) {} }
+      c.src = null; c.t0 = c.t1 = 0;
+    });
+    clearTimeout(L.timer);
+    L.queue = list.slice(k).concat(L.queue.slice(ready.length));
+    L.hist = list.slice(0, k);
+    L.playhead = 0; L.current = null;
+    R.idx = list[k].a; R.rewindArmed = false;
+    if (L.speaking) { L.waiting = true; schedule(); }
+    else L.kept = { book: R.book, at: R.idx, voice: voicePrefs.natural, speed: voicePrefs.speed };
+    showWord(); updateHUD(); saveProgress(true);
+    return true;
+  }
+  function canResumeKept() {
+    var k = L.kept;
+    return !!(k && k.book === R.book && k.at === R.idx && k.voice === voicePrefs.natural && k.speed === voicePrefs.speed &&
+              L.queue.length && L.queue[0].a === R.idx);
   }
 
   // ---- device voice
@@ -4522,9 +4867,11 @@
   function syncFrame() {
     L.raf = 0;
     if (!L.speaking) return;
-    var c = L.current, frac = -1;
+    var natural = voicePrefs.engine === 'natural';
+    var c = natural ? (L.queue[0] && L.queue[0].src ? L.queue[0] : null) : L.current, frac = -1;
+    if (natural) L.current = c;
     if (c) {
-      if (voicePrefs.engine === 'natural' && voiceAudio && c.dur) frac = voiceAudio.currentTime / c.dur;
+      if (natural) { var t = AC ? heardTime() - c.t0 : -1; if (t >= 0 && c.speech) frac = t / c.speech; }
       else if (c.dev && c.dev.start && !c.dev.boundary) {
         var secs = (nowMs() - c.dev.start) / 1000;
         if (secs > 0.7) frac = secs / c.dev.est;
@@ -4556,9 +4903,12 @@
     if (R.idx >= R.words.length) R.idx = 0;
     else if (R.rewindArmed) R.idx = resumePoint(R.idx);
     R.rewindArmed = false;
-    L.epoch++;
+    clearTimeout(L.prefetchTimer);
+    // prepared in advance (paused, or waiting in Listen mode) from exactly here: use it
+    if (!(voicePrefs.engine === 'natural' && canResumeKept())) { dropPrepared(); L.nextStart = R.idx; }
+    L.kept = null;
     L.speaking = true;
-    L.queue = []; L.current = null; L.nextStart = R.idx; L.waiting = false;
+    L.current = null; L.waiting = false; L.started = false;
     holdScreenAwake();
     setPlayIcon(true);
     el.context.textContent = '';
@@ -4568,36 +4918,42 @@
       try { speechSynthesis.cancel(); } catch (e) {}
       devSpeak();
     } else {
-      primeAudio();
+      unlockAudio();                     // inside the tap, for iOS
       L.waiting = true;
-      fillQueue();
       var ep = L.epoch;
-      naturalLoad().then(function () { pumpNatural(); }, function (err) {
+      naturalLoad().then(function () { schedule(); pumpNatural(); }, function (err) {
         if (L.speaking && ep === L.epoch && err && err.message !== 'stopped') stopWithMessage(err.message);
       });
     }
     renderListenStatus();
     updateHUD();
   }
-  // Stop sound and drop everything prepared. The engine itself stays loaded.
-  function haltVoice() {
+  // Stop sound. Unless told to keep it, everything prepared is dropped; the
+  // engine itself stays loaded either way.
+  function haltVoice(keep) {
     L.speaking = false;
-    L.epoch++;
     L.waiting = false;
     stopSync();
-    if (voiceAudio) { try { voiceAudio.pause(); } catch (e) {} }
+    clearTimeout(L.timer);
     if ('speechSynthesis' in window) { try { speechSynthesis.cancel(); } catch (e) {} }
-    L.queue.forEach(function (c) { if (c.url) URL.revokeObjectURL(c.url); });
-    if (L.current && L.current.url) URL.revokeObjectURL(L.current.url);
-    L.queue = []; L.current = null;
+    var at = keep && voicePrefs.engine === 'natural' ? keepPrepared() : (dropPrepared(), -1);
+    L.current = null;
+    keepAudioAwake(false);
+    restAudio();
     setMediaSession(false);
+    return at;
+  }
+  // a paused page should not hold the audio hardware awake
+  function restAudio() {
+    setTimeout(function () {
+      if (AC && !L.speaking && !PREVIEW.playing && AC.state === 'running') { try { AC.suspend().catch(function () {}); } catch (e) {} }
+    }, 1200);
   }
   function listenPause() {
     if (!L.speaking) return;
-    var at = R.idx;
-    haltVoice();
-    R.idx = at;
-    R.rewindArmed = true;        // pressing play again resumes at the sentence start
+    var at = R.idx, from = haltVoice(true);
+    if (from >= 0) { R.idx = from; R.rewindArmed = false; }   // resumes, at once, at the phrase that was speaking
+    else { R.idx = at; R.rewindArmed = true; }                 // resumes at the sentence start
     setPlayIcon(false);
     letScreenSleep();
     showWord();
@@ -4620,12 +4976,14 @@
     renderVoicePanel();
   }
   function restartListening(i) {
+    i = Math.max(0, Math.min(R.words.length, i));
+    if (i !== R.idx && skipWithinPrepared(i)) return;
     var was = L.speaking;
     if (was) haltVoice();
     R.idx = Math.max(0, Math.min(R.words.length, i));
     R.rewindArmed = false;            // an explicit jump means exactly here
     if (was) listenPlay();
-    else { showWord(); updateHUD(); saveProgress(true); }
+    else { showWord(); updateHUD(); saveProgress(true); prefetchIdle(); }
   }
   function setListenSpeed(v) {
     v = clampSpeed(v);
@@ -4635,6 +4993,7 @@
     // The natural voice bakes speed into the audio it makes, so what is already
     // prepared is at the old pace: start again from the word being spoken.
     if (L.speaking) restartListening(R.idx);
+    else prefetchIdle();
     updateHUD();
   }
   function nudgeSpeed(dir) {
@@ -4685,7 +5044,7 @@
   // downloaded before — so by the time play is pressed it is warm.
   function warmVoice() {
     if (L.on && voicePrefs.engine === 'natural' && naturalWasReady() && !VOICE_CRASHED && !naturalUnavailableReason()) {
-      naturalLoad().catch(function () {});
+      naturalLoad().then(prefetchIdle, function () {});
     }
   }
   function renderListenStatus() {
@@ -4792,9 +5151,14 @@
     // the honest line about speed, once there is a measurement to be honest about
     var note = '';
     if (natural && !why) {
-      var rtf = L.rtf.length ? L.rtf.slice().sort(function (a, b) { return a - b; })[Math.floor(L.rtf.length / 2)] : savedRtf();
-      if (rtf && rtf < 0.9) note = 'On this device the natural voice prepares speech ' + (1 / rtf).toFixed(1) + '× faster than it speaks, so it will play without gaps.';
-      else if (rtf) note = 'This device prepares the natural voice slower than it speaks, so expect short pauses between sentences. The device voice plays without them.';
+      var rtf = L.rtf.length ? median(L.rtf) : savedRtf();
+      var cores = N.threads > 1 ? ' using ' + N.threads + ' processor cores' : '';
+      // the first visit is the one page load the service worker does not
+      // control, so it is the one that cannot use several cores
+      var later = !manyCores() && !VOICE_ONE_CORE && 'serviceWorker' in navigator && !navigator.serviceWorker.controller && !inArtifactViewer
+        ? ' It runs faster the next time you open Read Fast.' : '';
+      if (rtf && rtf < 0.95) note = 'On this device the natural voice prepares speech ' + (1 / rtf).toFixed(1) + '× faster than it speaks' + cores + ', so it plays without gaps.';
+      else if (rtf) note = 'This device prepares the natural voice ' + (rtf < 1.15 ? 'about as fast as' : 'slower than') + ' it speaks' + cores + ', so expect short pauses between some sentences. The device voice plays without them.' + later;
       else note = 'The voice is made on this device, so your book never leaves it. The model downloads once from Hugging Face and the engine from jsDelivr; nothing else is sent.';
     } else if (!natural && !why) {
       note = 'Uses only voices that run on this device, so the text being read stays here. Keep Read Fast open while it reads.';
@@ -4838,7 +5202,8 @@
     PREVIEW.id = 0;
     if (PREVIEW.playing) {
       PREVIEW.playing = false;
-      if (voiceAudio && !L.speaking) { try { voiceAudio.pause(); } catch (e) {} }
+      if (previewSrc) { try { previewSrc.onended = null; previewSrc.stop(); } catch (e) {} previewSrc = null; }
+      if (!L.speaking) { keepAudioAwake(false); restAudio(); }
       try { if (!L.speaking && 'speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) {}
     }
     if (!el.voice.classList.contains('hidden')) renderVoiceActions();
@@ -4864,7 +5229,7 @@
       } catch (e) { PREVIEW.playing = false; renderVoiceActions(); }
       return;
     }
-    primeAudio();                                         // inside the tap, for iOS
+    unlockAudio();                                        // inside the tap, for iOS
     naturalLoad().then(function () {
       if (!PREVIEW.playing) return;
       PREVIEW.id = ++N.seq;
@@ -4877,16 +5242,23 @@
     }, function () { PREVIEW.playing = false; renderVoicePanel(); });
   }
   function playPreviewAudio(m) {
-    var dur = m.samples.length / m.rate;
-    recordRtf(m.ms, dur);
+    recordRtf(m.ms, m.raw || m.samples.length / m.rate);
     clearCrashGuard();
     PREVIEW.id = 0;
     if (!PREVIEW.playing || L.speaking) { renderVoiceActions(); return; }
-    var a = audioEl(), url = URL.createObjectURL(wavBlob(m.samples, m.rate));
-    a.src = url;
-    var done = function () { a.removeEventListener('ended', done); URL.revokeObjectURL(url); PREVIEW.playing = false; renderVoiceActions(); };
-    a.addEventListener('ended', done);
-    try { var p = a.play(); if (p && p.catch) p.catch(done); } catch (e) { done(); }
+    var b = AC && toBuffer(m.samples, m.rate);
+    if (!b) { PREVIEW.playing = false; renderVoiceActions(); return; }
+    var s = AC.createBufferSource();
+    s.buffer = b;
+    s.connect(AC.destination);
+    s.onended = function () {
+      if (previewSrc !== s) return;
+      previewSrc = null; PREVIEW.playing = false;
+      if (!L.speaking) { keepAudioAwake(false); restAudio(); }
+      renderVoiceActions();
+    };
+    previewSrc = s;
+    s.start(AC.currentTime + 0.03);
     renderVoiceActions();
   }
   // Hand the 117 MB back. Everything the natural voice stored lives in three
@@ -4895,9 +5267,10 @@
     unloadNatural();
     N.state = 'idle'; N.pct = 0; N.error = '';
     try {
-      ['readfast:voice:ready', 'readfast:voice:rtf', 'readfast:voice:loading', 'readfast:voice:crashed'].forEach(function (k) { localStorage.removeItem(k); });
+      ['readfast:voice:ready', 'readfast:voice:rtf', 'readfast:voice:rtf:mt', 'readfast:voice:rtf:st', 'readfast:voice:loading',
+       'readfast:voice:crashed', 'readfast:voice:onecore'].forEach(function (k) { localStorage.removeItem(k); });
     } catch (e) {}
-    L.rtf = [];
+    L.rtf = []; VOICE_ONE_CORE = false;
     var gone = window.caches ? Promise.all(VOICE_CACHES.map(function (n) { return caches.delete(n).catch(function () {}); })) : Promise.resolve();
     gone.then(function () {
       if (voicePrefs.engine === 'natural') { voicePrefs.engine = ''; saveVoicePrefs(); }
@@ -4920,6 +5293,11 @@
       el.listenBtn.setAttribute('aria-label', 'Listen mode is on — switch back to reading');
       el.reader.classList.add('listening');
     }
+    // Back from another app with the audio hardware taken away: show it as
+    // paused rather than pretending to play.
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && L.speaking && voicePrefs.engine === 'natural' && AC && AC.state !== 'running') listenPause();
+    });
     // Chrome fills the voice list late; the panel redraws when it arrives.
     if ('speechSynthesis' in window) {
       try { speechSynthesis.addEventListener('voiceschanged', function () { renderVoicePanel(); updateHUD(); }); } catch (e) {}

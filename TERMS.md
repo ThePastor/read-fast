@@ -59,7 +59,7 @@ Read Fast sets **no cookies**. It uses:
 
 - **IndexedDB** — your books, their text, your reading position and your reading statistics.
 - **Cache Storage** — the app itself and the two fonts, so it works offline; and, if you download it, the natural voice (about 117 MB). The Listen panel has a button that removes the voice and gives the space back.
-- **Local storage** — a few small settings: your reading pace, whether Listen is on, the voice and voice speed you chose. *(Earlier versions of these terms left this out. Read Fast has always kept your reading pace this way; the omission was ours.)*
+- **Local storage** — a few small settings: your reading pace, whether Listen is on, the voice and voice speed you chose, and how fast this device makes speech (so the voice can plan ahead). *(Earlier versions of these terms left this out. Read Fast has always kept your reading pace this way; the omission was ours.)*
 
 All of it is on your device and is cleared when you clear your browser's site data for this address. Clearing it deletes your library permanently. **Use "Back up library" if that would matter to you.**
 
