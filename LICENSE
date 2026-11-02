@@ -1,5 +1,5 @@
 Read Fast — Proprietary Software Licence
-Copyright (c) 2026 JohnsonXCorp. All rights reserved.
+Copyright (c) 2026 Anndy Johnson, operating as JohnsonX Labs. All rights reserved.
 
 ================================================================================
 1. OWNERSHIP
@@ -7,7 +7,8 @@ Copyright (c) 2026 JohnsonXCorp. All rights reserved.
 
 Read Fast, including its source code, build tooling, design, user interface,
 text, icons, wordmarks, and the arrangement and selection of all of the above
-(together, "the Software"), is the exclusive property of JohnsonXCorp.
+(together, "the Software"), is the exclusive property of Anndy Johnson, operating as JohnsonX Labs
+("JohnsonX Labs").
 
 Copyright subsists in the Software from the moment it was written. No
 registration, filing or fee is required for that copyright to exist or to be
@@ -39,7 +40,7 @@ You may:
 3. WHAT YOU MAY NOT DO
 ================================================================================
 
-Except with prior written permission from JohnsonXCorp, you may not:
+Except with prior written permission from JohnsonX Labs, you may not:
 
   (a) copy, reproduce, or store the Software other than the ordinary browser
       caching required to use it;
@@ -67,7 +68,7 @@ delivered for that purpose only.
 This matters, and pretending otherwise would make the rest of this document
 less credible rather than more.
 
-This repository is public on GitHub. By hosting it publicly, JohnsonXCorp has
+This repository is public on GitHub. By hosting it publicly, JohnsonX Labs has
 accepted GitHub's Terms of Service, section D.5 ("License Grant to Other
 Users"), which grants every GitHub user the right to VIEW and FORK this
 repository within GitHub. That grant is real, it takes precedence over this
@@ -110,7 +111,7 @@ components.
 ================================================================================
 
 Books, documents and files you open in Read Fast remain entirely yours.
-JohnsonXCorp claims no right, title or interest in them, receives no copy of
+JohnsonX Labs claims no right, title or interest in them, receives no copy of
 them, and could not obtain one — they are processed in your browser and stored
 only in your browser. See TERMS.md.
 
@@ -124,14 +125,14 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 Read Fast stores your library in your browser's local storage. Clearing your
 browser data, using private browsing, or reinstalling your browser will delete
-it. Use "Back up library" to keep a copy. JohnsonXCorp is not responsible for
+it. Use "Back up library" to keep a copy. JohnsonX Labs is not responsible for
 data lost from a browser it does not control.
 
 ================================================================================
 8. LIMITATION OF LIABILITY
 ================================================================================
 
-IN NO EVENT SHALL JOHNSONXCORP BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+IN NO EVENT SHALL JOHNSONX LABS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.

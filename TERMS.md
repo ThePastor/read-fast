@@ -2,7 +2,7 @@
 
 **Effective 4 September 2026 · applies to https://thepastor.github.io/read-fast/**
 
-© 2026 JohnsonXCorp. All rights reserved. Read Fast is proprietary software — see [LICENSE](./LICENSE).
+© 2026 JohnsonX Labs. All rights reserved. Read Fast is proprietary software — see [LICENSE](./LICENSE).
 
 By using Read Fast you agree to these terms. If you do not agree, do not use it.
 
@@ -23,7 +23,7 @@ It is free to use. There is no account, no sign-up, and no payment.
 - There is no server to send them to. Read Fast is a static file on GitHub Pages. There is no backend, no database, and no account system.
 - "Back up library" writes a file to your own downloads folder. Nothing is uploaded.
 
-JohnsonXCorp cannot read your library, cannot recover it for you, and has no way to know what you have added.
+JohnsonX Labs cannot read your library, cannot recover it for you, and has no way to know what you have added.
 
 ## 3. Every time the page touches the network
 
@@ -38,7 +38,7 @@ Exactly four destinations, none of which carry your book content:
 
 **That is the complete list.** There is no analytics, no telemetry, no crash reporting, no advertising, no tracking pixel, no third-party script, and no cookie set by Read Fast.
 
-Destinations 3 and 4 mean Google's servers see that a browser at your IP address loaded a page that uses those fonts. They do not see your books, your reading position, or anything you typed. Google's handling of those requests is governed by [Google's privacy policy](https://policies.google.com/privacy), and GitHub's by [GitHub's privacy statement](https://docs.github.com/site-policy/privacy-policies/github-privacy-statement) — neither is under JohnsonXCorp's control.
+Destinations 3 and 4 mean Google's servers see that a browser at your IP address loaded a page that uses those fonts. They do not see your books, your reading position, or anything you typed. Google's handling of those requests is governed by [Google's privacy policy](https://policies.google.com/privacy), and GitHub's by [GitHub's privacy statement](https://docs.github.com/site-policy/privacy-policies/github-privacy-statement) — neither is under JohnsonX Labs's control.
 
 **Once installed, Read Fast works with no network at all.** Turn on airplane mode and it still opens and reads.
 
@@ -75,7 +75,7 @@ Read Fast bundles PDF.js, core-js and fflate, and loads two open-licensed typefa
 
 Read Fast is provided **as is**, with no warranty of any kind. It is a free reading tool, not a system of record.
 
-To the fullest extent permitted by law, JohnsonXCorp is not liable for any loss or damage arising from your use of Read Fast — including lost reading positions, a lost library, a misparsed document, or any decision you made based on something Read Fast showed you.
+To the fullest extent permitted by law, JohnsonX Labs is not liable for any loss or damage arising from your use of Read Fast — including lost reading positions, a lost library, a misparsed document, or any decision you made based on something Read Fast showed you.
 
 Some jurisdictions do not permit these exclusions. Where that is so, they apply to the fullest extent allowed and no further, and nothing here limits liability for fraud or for anything else that cannot lawfully be limited.
 

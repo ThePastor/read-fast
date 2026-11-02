@@ -1,6 +1,6 @@
 /* Read Fast — service worker.
  *
- * Copyright (c) 2026 JohnsonXCorp. All rights reserved.
+ * Copyright (c) 2026 Anndy Johnson, operating as JohnsonX Labs. All rights reserved.
  * PROPRIETARY. Not open source. No permission is granted to copy, modify,
  * redistribute or create derivative works from this file.
  * See https://github.com/ThePastor/read-fast/blob/main/LICENSE
@@ -9,7 +9,7 @@
  * previous cache in activate(). The page is told when a new worker is waiting
  * and offers a Reload, rather than swapping the app out underneath the reader.
  */
-var VERSION = 'v27';
+var VERSION = 'v28';
 var CACHE = 'read-fast-' + VERSION;
 var DOC = new URL('./', self.location).href;
 var SHELL = [

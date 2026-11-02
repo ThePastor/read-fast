@@ -1,7 +1,7 @@
 # Read Fast — Intellectual Property Record
 
-**Copyright © 2026 JohnsonXCorp. All rights reserved.**
-Compiled 4 September 2026 · covers build **v16**
+**Copyright © 2026 Anndy Johnson, operating as JohnsonX Labs. All rights reserved.**
+Compiled 4 September 2026 · covers build **v16** · owner and name updated 2 November 2026 (v28)
 
 ---
 
@@ -29,7 +29,7 @@ value of this record is that it was written *before* any dispute existed.
 | **Title** | Read Fast |
 | **Type** | Computer program (literary work, s.2 *Copyright Act* (Canada)) |
 | **Author** | Anndy Johnson |
-| **Copyright owner** | JohnsonXCorp |
+| **Copyright owner** | Anndy Johnson, operating as JohnsonX Labs (named JohnsonXCorp until 2 November 2026) |
 | **First published** | 31 August 2026, at https://thepastor.github.io/read-fast/ |
 | **Country of first publication** | Canada |
 | **Current version** | v16, 4 September 2026 |
@@ -188,9 +188,9 @@ problem you only encounter if you verify releases by cache-busting.
 
 ## 5. Trade marks
 
-"Read Fast", "JohnsonXCorp", the `Johnson[X]Corp` wordmark, the amber bolt
+"Read Fast", "JohnsonX Labs", the `Johnson[X] Labs` wordmark, the amber bolt
 badge, and the gradient home-screen icon are used as trade marks by
-JohnsonXCorp. **None is registered.** Unregistered marks attract common-law
+JohnsonX Labs. **None is registered.** Unregistered marks attract common-law
 passing-off protection in Canada, limited to the area where reputation is
 demonstrable — which for an unadvertised app is narrow.
 
@@ -199,7 +199,7 @@ associated goods and services. It costs a modest fee (check CIPO's current
 schedule) and takes a long time. Worth doing only if Read Fast becomes something
 you intend to defend commercially. **"Read Fast" is a weak mark** — it is
 descriptive of what the product does, and descriptive marks are hard to register
-and harder to enforce. "JohnsonXCorp" is distinctive and would register far more
+and harder to enforce. "JohnsonX Labs" is distinctive and would register far more
 easily; if you register one thing, register that.
 
 ---
@@ -243,7 +243,7 @@ Honestly ranked, best value first:
    statutory damages and legal fees — which is usually the difference between a
    case being worth bringing and not. That deadline is the one genuinely
    time-sensitive item on this list.
-5. **Register "JohnsonXCorp"** as a trade mark before "Read Fast". It is the
+5. **Register "JohnsonX Labs"** as a trade mark before "Read Fast". It is the
    defensible mark and it covers everything else you build.
 
 ---
@@ -255,11 +255,9 @@ legal advice and it is not a substitute for registration. Its value is
 evidentiary: it fixes a date, a set of hashes, and a set of design decisions,
 before there was any reason to lie about them.
 
-**One thing to sort out.** The copyright owner is recorded as "JohnsonXCorp". If
-JohnsonXCorp is not a registered corporation or a registered sole
-proprietorship, it is a trade name — and a trade name cannot own copyright or
-bring a claim on its own; you would sue personally as Anndy Johnson, trading as
-JohnsonXCorp. That is fine, and nothing here breaks because of it. But if you
-ever license Read Fast commercially, register the business first, and record the
-assignment of copyright from you personally to the company. Doing that early is
-trivial; doing it retroactively during a dispute is not.
+**Owner and name (updated 2 November 2026).** JohnsonX Labs is a trade name, not a company, so the
+legal owner of the copyright is Anndy Johnson personally, and this record now says so. The name was
+JohnsonXCorp until 2 November 2026; it changed because in British Columbia only an incorporated
+company may use "Corp" in its name. Register JohnsonX Labs as a sole proprietorship with BC
+Registries before charging for anything. If the business is ever incorporated, assign the copyright
+from Anndy Johnson to the company in writing: it does not move on its own.
