@@ -11,8 +11,8 @@ not.
 Nothing in Read Fast's own proprietary licence restricts your rights under the
 licences below, with respect to the components they cover.
 
-Last verified against the shipped build: **v16, 4 September 2026**
-(`index.html`, SHA-256 `d2f2343850d7df17cb079571792f691fff211b9e699487da6dff33d03b8809ee`)
+Last verified against the shipped build: **v29, 2 November 2026**
+(`index.html`, SHA-256 `91029f0aff60fe4c57faeb55bf47407b5a4cfd66713d4edd8e0df3ac8e3ffe86`)
 
 ---
 
@@ -25,6 +25,40 @@ Last verified against the shipped build: **v16, 4 September 2026**
 | [fflate](https://github.com/101arrowz/fflate) | 0.8.2 (UMD) | MIT | **Bundled** — inlined into `index.html`, unmodified | © 2023 Arjun Barrett |
 | [Outfit](https://fonts.google.com/specimen/Outfit) | Google Fonts | SIL OFL 1.1 | **Loaded at runtime** from `fonts.gstatic.com`; cached by the service worker. Not redistributed. | Smartsheet Inc. |
 | [Manrope](https://fonts.google.com/specimen/Manrope) | Google Fonts | SIL OFL 1.1 | **Loaded at runtime** from `fonts.gstatic.com`; cached by the service worker. Not redistributed. | Mikhail Sharanda |
+
+**The natural voice (v29).** None of the following is in `index.html` or in this
+repository. Each is fetched by the reader's own browser, from its publisher's
+distribution point, **only if the reader chooses to download the natural voice**
+— and then cached on that device. JohnsonX Labs does not copy, host or
+redistribute any of them.
+
+| Component | Version | Licence | How it arrives | Copyright / source |
+|---|---|---|---|---|
+| [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) — the speech model and voices, ONNX export | v1.0, q8 | Apache-2.0 | Downloaded at runtime from [huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX) | hexgrad; ONNX export by the onnx-community |
+| [kokoro-js](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) | 1.2.1 | Apache-2.0 | Loaded at runtime from `cdn.jsdelivr.net` (`kokoro.web.js`, which also carries the next two) | hexgrad |
+| [Transformers.js](https://github.com/huggingface/transformers.js) (`@huggingface/transformers`) | 3.5.1 | Apache-2.0 | Inside `kokoro.web.js`; its WebAssembly runtime from `cdn.jsdelivr.net` | Hugging Face |
+| [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) | 1.21.0 | MIT | Inside Transformers.js, plus `ort-wasm-simd-threaded.jsep.wasm` | Microsoft Corporation |
+| [phonemizer](https://github.com/xenova/phonemizer.js) | 1.2.1 | Apache-2.0 **as published** — see below | Inside `kokoro.web.js` | Joshua Lochner (xenova) |
+| ↳ [eSpeak NG](https://github.com/espeak-ng/espeak-ng), compiled to WebAssembly inside phonemizer | — | **GPL-3.0-or-later** upstream | Inside phonemizer | The eSpeak NG authors — source at https://github.com/espeak-ng/espeak-ng |
+
+### The voice, and the GPL question — stated plainly
+
+phonemizer, which turns words into the sounds the voice speaks, is published
+under Apache-2.0. Inside it is a WebAssembly build of **eSpeak NG**, whose own
+authors license it under **GPL-3.0-or-later**. Whether that build inherits the
+GPL regardless of the wrapper's declared licence is not something this file can
+settle, so it is recorded here as a fact rather than assumed away.
+
+What Read Fast does is the arrangement the rule below anticipates: the
+component is **not bundled**. It is a separate file that Read Fast never
+copies, never ships in `index.html`, never stores in this repository, and never
+serves; the reader's browser fetches it from jsDelivr, unmodified, when the
+reader asks for the voice. eSpeak NG's source is available from its authors at
+the address above.
+
+**This arrangement has been flagged for review by a lawyer before Read Fast is
+ever sold.** If that review finds it insufficient, the remedy is a phonemizer
+without eSpeak NG, not a change to anything else in the app.
 
 **Neither PDF.js nor fflate has been modified.** Apache-2.0 section 4(b) would
 require a prominent statement of changes if they had been; there are none to
@@ -42,7 +76,9 @@ future should be checked the same way: what did it drag in with it?
 
 ### The one to watch
 
-**No GPL, LGPL, AGPL or MPL component is bundled, and none may be.** A copyleft
+**No GPL, LGPL, AGPL or MPL component is bundled, and none may be.** (The
+natural voice's engine contains a GPL component and is deliberately *not*
+bundled — see "The voice, and the GPL question" above.) A copyleft
 licence in a bundled dependency would compel Read Fast's own source to be
 offered under that licence — which would make the proprietary licence in
 [LICENSE](./LICENSE) unenforceable as to the combined work. Apache-2.0 and MIT

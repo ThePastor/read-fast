@@ -61,7 +61,7 @@
 </style>
 </head>
 <body>
-<script>window.BUILD={v:'v28',date:'2 November 2026'};</script>
+<script>window.BUILD={v:'v29',date:'2 November 2026'};</script>
 
 
 <style>
@@ -161,6 +161,14 @@
   .btn.ghost:hover { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35); }
   .btn.soft { background: var(--surface-2); color: var(--ink); }
   .btn.soft:hover { background: var(--surface-3); }
+  /* A button that cannot be pressed has to look it. Until v29 no button was
+     ever disabled, so there was no style for it — and the voice panel's Preview
+     sat there, unpressable, looking exactly like a live button. */
+  .btn:disabled, .btn:disabled:hover { opacity: 0.42; cursor: not-allowed; transform: none; filter: none; }
+  .btn.primary:disabled, .btn.primary:disabled:hover { background: var(--accent); }
+  .btn.soft:disabled, .btn.soft:disabled:hover { background: var(--surface-2); }
+  /* busy, not dead: it carries the download's progress, so it stays legible */
+  .btn.busy:disabled { opacity: 0.8; cursor: progress; }
   .icon-btn {
     width: 40px; height: 40px;
     display: inline-flex; align-items: center; justify-content: center;
@@ -649,6 +657,55 @@
      playing and on every phone. Both columns are shown to everyone: a laptop
      with a touchscreen has both, and neither list is a secret. */
   .help-box { width: min(520px, 100%); }
+
+  /* ---------- Listen ----------
+     The headphones button sits with the transport because it changes what play
+     DOES; in Listen mode the pace controls become voice speed and a voice chip
+     takes the place of the "Pace" label. */
+  .ctl.listen[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .ctl.listen[aria-pressed="true"]:hover { background: var(--accent-hover); color: var(--accent-ink); }
+  .voice-chip {
+    display: none; flex: none; align-items: center; gap: 6px;
+    height: 32px; padding: 0 12px 0 10px; border-radius: 999px;
+    background: rgba(245, 179, 49, 0.14); border: 1px solid rgba(245, 179, 49, 0.35);
+    color: var(--ink); font-size: 13px; font-weight: 700; white-space: nowrap;
+  }
+  .voice-chip svg { width: 15px; height: 15px; color: var(--accent); }
+  .voice-chip:hover { background: rgba(245, 179, 49, 0.22); }
+  #reader.listening .voice-chip { display: inline-flex; }
+  #reader.listening #pace-label { display: none; }
+  .voice-box { width: min(540px, 100%); }
+  .engines { display: grid; gap: 10px; margin: 0 0 14px; }
+  .engine {
+    display: grid; gap: 4px; text-align: left;
+    padding: 12px 14px; border-radius: 12px;
+    border: 1px solid var(--line-strong); background: var(--surface);
+    transition: border-color 120ms, background 120ms;
+  }
+  .engine:hover { border-color: rgba(255, 255, 255, 0.3); }
+  .engine[aria-checked="true"] { border-color: var(--accent); background: rgba(245, 179, 49, 0.08); }
+  .engine.off { opacity: 0.55; cursor: not-allowed; }
+  .engine-head { display: flex; align-items: center; gap: 8px; font-size: 14.5px; }
+  .tag-best {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 3px 7px; border-radius: 6px; background: rgba(245, 179, 49, 0.16); color: var(--accent);
+  }
+  .engine-sub { font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .engine-status { font-size: 12.5px; color: var(--ink); line-height: 1.45; }
+  .vbar { display: block; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); overflow: hidden; margin-top: 4px; }
+  .vbar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 200ms ease; }
+  .vlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 0 0 12px; }
+  .vopt {
+    display: grid; gap: 2px; text-align: left;
+    padding: 9px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03);
+  }
+  .vopt:hover { border-color: var(--line-strong); }
+  .vopt b { font-size: 14px; }
+  .vopt span { font-size: 12px; color: var(--muted); }
+  .vopt[aria-checked="true"] { border-color: var(--accent); background: rgba(245, 179, 49, 0.1); }
+  .voice-box .vnote { font-size: 12.5px; color: var(--muted); margin: 0 0 6px; }
+  .voice-box .vremove { margin: 0 0 12px; font-size: 12.5px; }
   .help-table {
     width: 100%;
     border-collapse: collapse;
@@ -1384,6 +1441,7 @@
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-.6 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20 4.5V11h-6.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9.4 9.3a2.7 2.7 0 1 1 3.4 2.6c-.6.2-.9.7-.9 1.3v.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.05" fill="currentColor"/></symbol>
     <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4.5l8.2 14.2a.8.8 0 0 1-.7 1.2H4.5a.8.8 0 0 1-.7-1.2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v4.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.05" fill="currentColor"/></symbol>
+    <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="3" y="13.5" width="5" height="7.5" rx="2" fill="currentColor"/><rect x="16" y="13.5" width="5" height="7.5" rx="2" fill="currentColor"/></symbol>
   </defs>
 </svg>
 
@@ -1493,6 +1551,7 @@
         <tr><td>Skip 10 words</td><td><kbd>←</kbd> <kbd>→</kbd></td><td>Swipe sideways</td></tr>
         <tr><td>Speed, 25 wpm a step</td><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Swipe up or down</td></tr>
         <tr><td>Open the page view</td><td><kbd>P</kbd></td><td>Press and hold</td></tr>
+        <tr><td>Listen — read it aloud</td><td><kbd>V</kbd></td><td>The headphones button</td></tr>
         <tr><td>Back to the library</td><td><kbd>Esc</kbd></td><td>The arrow, top left</td></tr>
         <tr><td>This panel</td><td><kbd>?</kbd></td><td>The <span aria-hidden="true">?</span> button</td></tr>
       </tbody>
@@ -1507,6 +1566,34 @@
       </tbody>
     </table>
     <div class="confirm-actions"><button class="btn primary" id="help-close" type="button">Got it</button></div>
+  </div>
+</div>
+
+<div class="confirm hidden" id="voice" role="dialog" aria-modal="true" aria-labelledby="voice-title">
+  <div class="confirm-box voice-box">
+    <h4 id="voice-title">Listen</h4>
+    <p>Read Fast reads the book aloud from where you are, and the word on screen follows the voice.</p>
+    <div class="engines" role="radiogroup" aria-label="Voice engine">
+      <button type="button" class="engine" id="eng-natural" role="radio" aria-checked="false">
+        <span class="engine-head"><b>Natural voice</b><span class="tag-best">Most human</span></span>
+        <span class="engine-sub">An AI voice that runs on this device. Your book never leaves it.</span>
+        <span class="engine-status" id="eng-natural-status"></span>
+        <span class="vbar hidden" id="eng-natural-bar"><i></i></span>
+      </button>
+      <button type="button" class="engine" id="eng-device" role="radio" aria-checked="false">
+        <span class="engine-head"><b>Device voice</b></span>
+        <span class="engine-sub">Your phone or computer&rsquo;s built-in voice. Starts instantly; quality depends on the device.</span>
+        <span class="engine-status" id="eng-device-status"></span>
+      </button>
+    </div>
+    <div class="vlist" id="voice-list" role="radiogroup" aria-label="Voice"></div>
+    <p class="vnote" id="voice-note"></p>
+    <p class="vremove"><button class="linky hidden" id="voice-remove" type="button">Remove the downloaded voice from this device</button></p>
+    <div class="confirm-actions">
+      <button class="btn soft" id="voice-close" type="button">Close</button>
+      <button class="btn soft" id="voice-preview" type="button">Preview</button>
+      <button class="btn primary" id="voice-go" type="button">Start listening</button>
+    </div>
   </div>
 </div>
 
@@ -1601,6 +1688,7 @@
         <button class="ctl" id="wpm-up" type="button" aria-label="Faster" title="Faster (↑)"><svg><use href="#i-plus"/></svg></button>
       </div>
       <div class="transport">
+        <button class="ctl listen" id="listen-btn" type="button" aria-pressed="false" aria-label="Listen — read the book aloud" title="Listen — read aloud (V)"><svg><use href="#i-headphones"/></svg></button>
         <button class="ctl" id="restart-btn" type="button" aria-label="Start from the beginning" title="Start from the beginning"><svg><use href="#i-restart"/></svg></button>
         <button class="ctl" id="skip-back" type="button" aria-label="Back 10 words" title="Back 10 words (←)"><svg><use href="#i-back"/></svg></button>
         <button class="play" id="play-btn" type="button" aria-label="Play" title="Play / pause (Space)"><svg id="play-icon"><use href="#i-play"/></svg></button>
@@ -1609,7 +1697,8 @@
       <div class="status num"><b id="status-main"></b><span id="status-sub"></span></div>
     </div>
     <div class="pace">
-      <span class="eyebrow">Pace</span>
+      <span class="eyebrow" id="pace-label">Pace</span>
+      <button class="voice-chip" id="voice-chip" type="button" aria-label="Choose a voice" title="Choose a voice"><svg><use href="#i-headphones"/></svg><span id="voice-chip-name">Voice</span></button>
       <div class="presets num" id="presets" role="group" aria-label="Words per minute presets"></div>
     </div>
   </footer>
@@ -1672,6 +1761,7 @@
      release, in plain words, newest first. Trim the tail past a dozen — nobody
      reads further back than that. */
   var WHATS_NEW = [
+    ['v29', 'Listen: Read Fast can now read your book aloud, in a natural voice that runs on your own device — your book never leaves it — or your device’s built-in voice. Choose from 0.75× to 2×, and the word on screen follows along.'],
     ['v28', 'The name at the foot of the page has changed from JohnsonXCorp to JohnsonX Labs. In British Columbia only an incorporated company may use \u201cCorp\u201d in its name, so the maker\u2019s name now follows the rules. Nothing else changed.'],
     ['v27', 'The JohnsonXCorp mark at the foot of the page now links to the JohnsonXCorp homepage, where you can find the other apps.'],
     ['v26', 'On a phone or tablet the app now keeps clear of the notch, the Dynamic Island and the rounded corners, so nothing sits behind them — and turning your phone sideways gives you a proper reading layout instead of a squeezed one.'],
@@ -1726,7 +1816,12 @@
     minipage: $('minipage'), mpLabel: $('mp-label'), mpText: $('mp-text'),
     pagepop: $('pagepop'), ppPage: $('pp-page'), ppPrev: $('pp-prev'), ppNext: $('pp-next'),
     ppClose: $('pp-close'), ppBody: $('pp-body'), ppGo: $('pp-go'), ppHint: $('pp-hint'),
-    ppChapters: $('pp-chapters'), ppChapter: $('pp-chapter'), ppMain: $('pp-main'), ppList: $('pp-chapter-list')
+    ppChapters: $('pp-chapters'), ppChapter: $('pp-chapter'), ppMain: $('pp-main'), ppList: $('pp-chapter-list'),
+    listenBtn: $('listen-btn'), voiceChip: $('voice-chip'), voiceChipName: $('voice-chip-name'), paceLabel: $('pace-label'),
+    voice: $('voice'), engNatural: $('eng-natural'), engDevice: $('eng-device'),
+    engNaturalStatus: $('eng-natural-status'), engNaturalBar: $('eng-natural-bar'), engDeviceStatus: $('eng-device-status'),
+    voiceList: $('voice-list'), voiceNote: $('voice-note'), voiceRemove: $('voice-remove'),
+    voiceClose: $('voice-close'), voicePreview: $('voice-preview'), voiceGo: $('voice-go')
   };
 
   // ---------- Storage (IndexedDB, with in-memory fallback) ----------
@@ -3416,10 +3511,12 @@
       renderPresets();
       showWord();
       updateHUD();
+      warmVoice();
       el.play.focus();
     });
   }
   function closeBook() {
+    if (L.speaking) listenPause();
     pause();
     letScreenSleep();
     saveProgress(true).then(function () {
@@ -3472,7 +3569,7 @@
     if (scale < 1) el.word.style.setProperty('--scale', scale.toFixed(2)); else el.word.style.removeProperty('--scale');
   }
   function showContext() {
-    if (R.playing || !R.words.length) { el.context.textContent = ''; return; }
+    if (R.playing || L.speaking || !R.words.length) { el.context.textContent = ''; return; }
     var a = Math.max(0, R.idx - 10), b = Math.min(R.words.length, R.idx + 11);
     el.context.innerHTML = '';
     for (var i = a; i < b; i++) {
@@ -3499,17 +3596,27 @@
     el.track.setAttribute('aria-valuenow', Math.round(pct));
     el.scrubLeft.textContent = Math.floor(pct) + '%';
     var remaining = Math.max(0, R.words.length - R.idx);
-    el.eta.textContent = etaText({ wordCount: R.words.length, pos: R.idx }, settings.wpm);
+    el.eta.textContent = etaText({ wordCount: R.words.length, pos: R.idx }, L.on ? listenWpm() : settings.wpm);
     el.statusMain.textContent = fmtNum(remaining) + ' words to go';
     el.statusSub.textContent = R.playing ? 'Reading' : (R.idx >= R.words.length ? 'Finished' : 'Paused');
-    el.wpmVal.textContent = settings.wpm;
-    // The big number stays the rate you chose; only the unit label admits that
-    // the app has not reached it yet.
-    el.wpmLabel.textContent = (R.playing && R.rampStart) ? 'warming' : 'wpm';
+    if (L.on) {
+      el.wpmVal.textContent = fmtSpeed(voicePrefs.speed);
+      el.wpmLabel.textContent = 'voice speed';
+      el.voiceChipName.textContent = currentVoiceName();
+      renderListenStatus();
+    } else {
+      el.wpmVal.textContent = settings.wpm;
+      // The big number stays the rate you chose; only the unit label admits that
+      // the app has not reached it yet.
+      el.wpmLabel.textContent = (R.playing && R.rampStart) ? 'warming' : 'wpm';
+    }
     updateReaderChapter();
     var chips = el.presets.children;
-    for (var i = 0; i < chips.length; i++) chips[i].classList.toggle('on', parseInt(chips[i].dataset.wpm, 10) === settings.wpm);
-    el.hint.classList.toggle('hidden', R.playing);
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].classList.toggle('on', L.on ? parseFloat(chips[i].dataset.speed) === voicePrefs.speed
+                                           : parseInt(chips[i].dataset.wpm, 10) === settings.wpm);
+    }
+    el.hint.classList.toggle('hidden', running());
     showContext();
     renderMini();
   }
@@ -3845,7 +3952,10 @@
     updateHUD();
     saveProgress(true);
   }
-  function toggle() { R.playing ? pause() : play(); }
+  function toggle() {
+    if (L.on) { if (L.speaking) listenPause(); else listenPlay(); return; }
+    R.playing ? pause() : play();
+  }
 
   // ---------- Touch ----------
   // The reader carries a full keyboard set that a phone cannot reach, and the
@@ -3909,13 +4019,12 @@
         return;
       }
       if (ay >= TOUCH_SWIPE && ay > ax * TOUCH_AXIS) {
-        setWpm(settings.wpm + (dy < 0 ? STEP : -STEP));   // up is faster, as with the arrow keys
-        cue(settings.wpm + ' wpm');
+        cue(nudgeSpeed(dy < 0 ? 1 : -1));   // up is faster, as with the arrow keys
         return;
       }
       if (moved <= TOUCH_TAP && dur <= TOUCH_TAP_MS) {
         toggle();
-        cue(R.playing ? 'Playing' : 'Paused');
+        cue(running() ? (L.on ? 'Listening' : 'Playing') : 'Paused');
       }
     }, { passive: true });
 
@@ -3930,6 +4039,7 @@
     el.hint.classList.add('touch');
   }
   function seek(i) {
+    if (L.on) { restartListening(i); return; }
     var was = R.playing;
     if (was) { R.playing = false; stopClock(); }
     R.idx = Math.max(0, Math.min(R.words.length, i));
@@ -3944,18 +4054,879 @@
     try { localStorage.setItem('readfast:wpm', String(settings.wpm)); } catch (e) {}
     if (!silent) updateHUD();
   }
-  function renderPresets() {
-    if (el.presets.children.length) return;
-    PRESETS.forEach(function (p) {
+  // The same row of chips serves both modes: words per minute when reading,
+  // voice speed when listening.
+  function renderPresets(force) {
+    var mode = L.on ? 'voice' : 'wpm';
+    if (el.presets.children.length && el.presets.dataset.mode === mode && !force) return;
+    el.presets.innerHTML = '';
+    el.presets.dataset.mode = mode;
+    el.presets.setAttribute('aria-label', L.on ? 'Voice speed presets' : 'Words per minute presets');
+    (L.on ? VOICE_SPEEDS : PRESETS).forEach(function (p) {
       var b = document.createElement('button');
       b.type = 'button';
-      b.dataset.wpm = p;
-      b.textContent = p;
-      b.setAttribute('aria-label', p + ' words per minute');
-      b.addEventListener('click', function () { setWpm(p); });
+      if (L.on) {
+        b.dataset.speed = p;
+        b.textContent = fmtSpeed(p);
+        b.setAttribute('aria-label', 'Voice speed ' + fmtSpeed(p));
+        b.addEventListener('click', function () { setListenSpeed(p); });
+      } else {
+        b.dataset.wpm = p;
+        b.textContent = p;
+        b.setAttribute('aria-label', p + ' words per minute');
+        b.addEventListener('click', function () { setWpm(p); });
+      }
       el.presets.appendChild(b);
     });
   }
+
+  // ---------- Listen: the book read aloud ----------
+  // Two engines, one behaviour. The NATURAL voice is Kokoro, an open (Apache-2.0)
+  // speech model run on this device by WebAssembly inside a Worker: the text is
+  // turned into sound here and never leaves. It costs a one-time download of
+  // about 117 MB, cached by the browser, after which it works offline. The
+  // DEVICE voice is whatever English voice the phone or computer already has —
+  // instant, but only as good as the platform. Remote voices (Edge's "Online"
+  // ones, Chrome's "Google" ones) are deliberately excluded: they send the text
+  // being spoken to Microsoft or Google, which is exactly what this app promises
+  // never happens to a book.
+  //
+  // Either way the reader's own position, R.idx, is the voice's position. The
+  // big word follows what is being said, so reading along needs no extra mode.
+  var VOICE_SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
+  var SPEED_MIN = 0.5, SPEED_MAX = 2, SPEED_STEP = 0.25;
+  var KOKORO_URL = 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js';
+  var KOKORO_MODEL = 'onnx-community/Kokoro-82M-v1.0-ONNX';
+  var NATURAL_MB = 117;          // model 92 + runtime 22 + engine 2 + one voice 0.5, measured
+  // Ranked by the model's own published grades, best first, and limited to the
+  // ones that sound like a person rather than a demo.
+  var NATURAL_VOICES = [
+    { id: 'af_heart', name: 'Heart', note: 'American · female' },
+    { id: 'af_bella', name: 'Bella', note: 'American · female' },
+    { id: 'bf_emma', name: 'Emma', note: 'British · female' },
+    { id: 'am_michael', name: 'Michael', note: 'American · male' },
+    { id: 'am_fenrir', name: 'Fenrir', note: 'American · male' },
+    { id: 'bm_george', name: 'George', note: 'British · male' }
+  ];
+  var VOICE_CACHES = ['transformers-cache', 'kokoro-voices', 'readfast-voice-engine-1'];
+  // Deadlines, because an engine that hangs leaves a reader staring at a play
+  // button that does nothing — the v21 rule: nothing that can hang is awaited
+  // without one.
+  var LOAD_STALL_MS = 60000;     // no download progress for this long = stalled
+  var LOAD_START_MS = 45000;     // the engine has to report SOMETHING by then
+  var GEN_LIMIT_MS = 45000;      // one sentence taking longer than this = give up
+  var AHEAD = 3;                 // sentences prepared beyond the one being spoken
+  var WPM_AT_1X = 175;           // a fair starting guess until a real one is measured
+
+  var voicePrefs = { engine: '', natural: 'af_heart', device: '', speed: 1 };
+  (function () {
+    try {
+      var saved = JSON.parse(localStorage.getItem('readfast:voice') || 'null');
+      if (saved) Object.keys(voicePrefs).forEach(function (k) { if (saved[k] != null) voicePrefs[k] = saved[k]; });
+    } catch (e) {}
+    voicePrefs.speed = clampSpeed(voicePrefs.speed);
+  })();
+  function saveVoicePrefs() {
+    try { localStorage.setItem('readfast:voice', JSON.stringify(voicePrefs)); } catch (e) {}
+  }
+  function clampSpeed(v) {
+    v = parseFloat(v);
+    if (!isFinite(v)) return 1;
+    return Math.round(Math.max(SPEED_MIN, Math.min(SPEED_MAX, v)) / SPEED_STEP) * SPEED_STEP;
+  }
+  function fmtSpeed(v) { return (Math.round(v * 100) / 100) + '×'; }
+
+  // A phone that runs out of memory while loading the model does not throw — the
+  // OS simply kills the page, and it reloads. If the app then tried the natural
+  // voice again it would crash again, forever. So a flag is set before loading
+  // and cleared after the first sentence is spoken; finding it still set on
+  // launch means the last attempt died, and the natural voice waits to be asked.
+  var VOICE_CRASHED = false;
+  (function () {
+    try {
+      if (localStorage.getItem('readfast:voice:loading')) {
+        localStorage.removeItem('readfast:voice:loading');
+        localStorage.setItem('readfast:voice:crashed', '1');
+      }
+      VOICE_CRASHED = localStorage.getItem('readfast:voice:crashed') === '1';
+    } catch (e) {}
+  })();
+  function naturalWasReady() {
+    try { return localStorage.getItem('readfast:voice:ready') === '1'; } catch (e) { return false; }
+  }
+  function savedRtf() {
+    try { var v = parseFloat(localStorage.getItem('readfast:voice:rtf')); return isFinite(v) ? v : 0; } catch (e) { return 0; }
+  }
+  function naturalUnavailableReason() {
+    if (inArtifactViewer) return 'This preview window blocks the download the natural voice needs. Open Read Fast at thepastor.github.io to use it.';
+    if (typeof WebAssembly !== 'object' || typeof Worker !== 'function' || typeof Blob !== 'function' || !window.URL) {
+      return 'This browser cannot run the natural voice.';
+    }
+    return '';
+  }
+
+  var L = {
+    on: false,          // Listen mode is selected in the reader
+    speaking: false,    // the voice is running, or getting ready to
+    epoch: 0,           // bumped on every stop; results from an older run are dropped
+    queue: [],          // prepared sentences, in order
+    nextStart: 0,       // where the next sentence to prepare begins
+    current: null,      // the sentence being spoken now
+    waiting: false,     // the voice has caught up with the engine
+    raf: 0,
+    rtf: [],            // seconds to prepare ÷ seconds of speech, natural voice
+    words1x: 0, secs1x: 0   // speech measured so far, normalised to 1×
+  };
+  var N = { worker: null, state: 'idle', pct: 0, error: '', waiters: [],
+            inflight: 0, genTimer: 0, stallTimer: 0, seq: 0,
+            proven: false };   // a sentence has been made this session — memory is known to suffice
+  function guardOn() { if (!N.proven) { try { localStorage.setItem('readfast:voice:loading', String(Date.now())); } catch (e) {} } }
+  function guardOff() { try { localStorage.removeItem('readfast:voice:loading'); } catch (e) {} }
+
+  // ---- the worker: Kokoro runs here, off the main thread, so the page stays
+  // responsive while a sentence is being synthesised (a second or more of solid
+  // CPU each). Kept as a string because the app is one file; it becomes a
+  // module Worker through a Blob URL.
+  var VOICE_WORKER_SRC = [
+    "let tts = null;",
+    "self.onmessage = async (e) => {",
+    "  const m = e.data;",
+    "  if (m.type === 'load') {",
+    "    try {",
+    "      const { KokoroTTS } = await import(m.url);",
+    "      postMessage({ type: 'progress', file: 'engine' });",
+    "      tts = await KokoroTTS.from_pretrained(m.model, { dtype: 'q8', device: 'wasm',",
+    "        progress_callback: (p) => { if (p && p.status === 'progress') postMessage({ type: 'progress', file: String(p.file || ''), loaded: p.loaded || 0, total: p.total || 0 }); } });",
+    "      postMessage({ type: 'ready' });",
+    "    } catch (err) { postMessage({ type: 'error', stage: 'load', message: String((err && err.message) || err) }); }",
+    "  } else if (m.type === 'gen') {",
+    "    try {",
+    "      const t0 = performance.now();",
+    "      const a = await tts.generate(m.text, { voice: m.voice, speed: m.speed });",
+    // copied, never transferred in place: the model's own output may be a view
+    // into the engine's memory, and detaching that would break the next sentence
+    "      const samples = new Float32Array(a.audio);",
+    "      postMessage({ type: 'audio', id: m.id, samples, rate: a.sampling_rate, ms: performance.now() - t0 }, [samples.buffer]);",
+    "    } catch (err) { postMessage({ type: 'error', stage: 'gen', id: m.id, message: String((err && err.message) || err) }); }",
+    "  }",
+    "};"
+  ].join('\n');
+
+  function naturalLoad() {
+    if (N.state === 'ready') return Promise.resolve();
+    var why = naturalUnavailableReason();
+    if (why) return Promise.reject(new Error(why));
+    var p = new Promise(function (res, rej) { N.waiters.push([res, rej]); });
+    if (N.state === 'loading') return p;
+    N.state = 'loading'; N.pct = 0; N.error = '';
+    guardOn();
+    try {
+      var url = URL.createObjectURL(new Blob([VOICE_WORKER_SRC], { type: 'text/javascript' }));
+      N.worker = new Worker(url, { type: 'module' });
+      N.worker.onmessage = onNaturalMessage;
+      N.worker.onerror = function (e) {
+        naturalFail('The voice engine failed to start' + (e && e.message ? ' (' + e.message + ').' : '.'));
+      };
+      N.worker.postMessage({ type: 'load', url: KOKORO_URL, model: KOKORO_MODEL });
+      armStall(LOAD_START_MS);
+    } catch (e) {
+      naturalFail('The voice engine could not start in this browser.');
+    }
+    renderVoicePanel();
+    return p;
+  }
+  function armStall(ms) {
+    clearTimeout(N.stallTimer);
+    N.stallTimer = setTimeout(function () {
+      if (N.state === 'loading') naturalFail(navigator.onLine === false
+        ? 'The natural voice needs a connection the first time it downloads.'
+        : 'The download stopped making progress. Check the connection and try again.');
+    }, ms);
+  }
+  function settleWaiters(err) {
+    var w = N.waiters; N.waiters = [];
+    w.forEach(function (p) { if (err) p[1](err); else p[0](); });
+  }
+  function unloadNatural() {
+    clearTimeout(N.stallTimer); clearTimeout(N.genTimer);
+    if (N.worker) { try { N.worker.terminate(); } catch (e) {} }
+    N.worker = null; N.inflight = 0;
+    if (N.state !== 'error') N.state = 'idle';
+    settleWaiters(new Error('stopped'));
+  }
+  function naturalFail(msg) {
+    unloadNatural();
+    N.state = 'error'; N.error = msg;
+    // A failure we caught is not a crash: clear the guard so the next launch
+    // does not report one.
+    guardOff();
+    if (L.speaking && voicePrefs.engine === 'natural') stopWithMessage(msg);
+    renderVoicePanel();
+  }
+  function onNaturalMessage(e) {
+    var m = e.data || {};
+    if (m.type === 'progress') {
+      armStall(LOAD_STALL_MS);
+      if (m.total && /\.onnx$/.test(m.file)) { N.pct = Math.min(99, Math.round(100 * m.loaded / m.total)); renderVoiceStatus(); }
+    } else if (m.type === 'ready') {
+      clearTimeout(N.stallTimer);
+      N.state = 'ready'; N.pct = 100;
+      guardOff();      // loaded; the first sentence arms it again
+      try { localStorage.setItem('readfast:voice:ready', '1'); } catch (e) {}
+      settleWaiters(null);
+      renderVoicePanel();
+      pumpNatural();
+    } else if (m.type === 'audio') {
+      onNaturalAudio(m);
+    } else if (m.type === 'error') {
+      if (m.stage === 'load') naturalFail('The natural voice could not be loaded: ' + m.message);
+      else { if (m.id === N.inflight) { clearTimeout(N.genTimer); N.inflight = 0; } naturalFail('The natural voice stopped: ' + m.message); }
+    }
+  }
+
+  // ---- sentences
+  // Speech is prepared a sentence at a time: short enough that the first sound
+  // arrives quickly, long enough for natural phrasing. A sentence with no full
+  // stop for 30 words is cut at a comma where one exists, so the voice never
+  // breaks mid-phrase if it can help it.
+  function speechWeight(w) {
+    var core = w.toLowerCase().replace(/[^a-z0-9']/g, '');
+    var syl = (core.match(/[aeiouy]+/g) || []).length || 1;
+    if (/\d/.test(core)) syl = Math.max(syl, Math.ceil(core.length * 0.9));   // numbers are said long
+    var wt = syl + 0.35;
+    var end = w.replace(/["'”’)\]]+$/, '').slice(-1);
+    if (/[.!?…]/.test(end)) wt += 1.6;
+    else if (/[,;:—–]/.test(end)) wt += 0.8;
+    return wt;
+  }
+  function chunkOf(a, b) {
+    var ws = R.words.slice(a, b), cum = [], t = 0;
+    for (var i = 0; i < ws.length; i++) { t += speechWeight(ws[i]); cum.push(t); }
+    return { a: a, b: b, text: ws.join(' '), cum: cum, total: t, ready: false, sent: false, url: null, dur: 0, id: 0, epoch: L.epoch };
+  }
+  function makeChunk(a, cap) {
+    var words = R.words, n = words.length, i = a, soft = -1;
+    while (i < n && i - a < cap) {
+      var core = words[i].replace(/["'”’)\]]+$/, '');
+      i++;
+      if (i - a >= 3 && /[.!?…]$/.test(core)) return chunkOf(a, i);
+      if (i - a >= cap / 2 && /[,;:—–]$/.test(core)) soft = i;
+    }
+    if (i < n && soft > 0) i = soft;
+    return chunkOf(a, i);
+  }
+  function fillQueue() {
+    while (L.queue.length < AHEAD + 1 && L.nextStart < R.words.length) {
+      var first = !L.queue.length && !L.current;
+      var c = makeChunk(L.nextStart, first ? 14 : 30);
+      L.queue.push(c);
+      L.nextStart = c.b;
+    }
+  }
+  function noteSpoken(c, seconds) {
+    if (seconds <= 0) return;
+    L.words1x += (c.b - c.a);
+    L.secs1x += seconds * voicePrefs.speed;
+  }
+  function listenWpm() {
+    var base = L.secs1x > 20 ? (L.words1x / L.secs1x) * 60 : WPM_AT_1X;
+    return Math.round(base * voicePrefs.speed);
+  }
+
+  // ---- natural voice: generation
+  function pumpNatural() {
+    if (!L.speaking || voicePrefs.engine !== 'natural' || N.state !== 'ready' || N.inflight || !N.worker) return;
+    fillQueue();
+    var c = null;
+    for (var i = 0; i < L.queue.length; i++) if (!L.queue[i].sent) { c = L.queue[i]; break; }
+    if (!c) return;
+    c.sent = true; c.id = ++N.seq; c.epoch = L.epoch;
+    N.inflight = c.id;
+    guardOn();
+    clearTimeout(N.genTimer);
+    N.genTimer = setTimeout(function () {
+      naturalFail('This device took too long to prepare a sentence, so the natural voice stopped. The device voice will play without the wait.');
+    }, GEN_LIMIT_MS);
+    N.worker.postMessage({ type: 'gen', id: c.id, text: c.text, voice: voicePrefs.natural, speed: voicePrefs.speed });
+  }
+  function onNaturalAudio(m) {
+    if (m.id === N.inflight) { clearTimeout(N.genTimer); N.inflight = 0; }
+    var c = null, i;
+    for (i = 0; i < L.queue.length; i++) if (L.queue[i].id === m.id) { c = L.queue[i]; break; }
+    if (m.id === PREVIEW.id) { playPreviewAudio(m); pumpNatural(); return; }
+    if (c && c.epoch === L.epoch && L.speaking) {
+      var dur = m.samples.length / m.rate;
+      c.url = URL.createObjectURL(wavBlob(m.samples, m.rate));
+      c.dur = dur; c.ready = true;
+      recordRtf(m.ms, dur);
+      noteSpoken(c, dur);
+      // The first real sentence from this engine on this device means it can
+      // load AND run here; the crash guard has done its job.
+      clearCrashGuard();
+      if (L.waiting && L.queue[0] === c) playChunk();
+    }
+    pumpNatural();
+  }
+  function recordRtf(ms, dur) {
+    if (dur < 0.4) return;
+    L.rtf.push(ms / 1000 / dur);
+    if (L.rtf.length > 8) L.rtf.shift();
+    var sorted = L.rtf.slice().sort(function (a, b) { return a - b; });
+    var med = sorted[Math.floor(sorted.length / 2)];
+    try { localStorage.setItem('readfast:voice:rtf', med.toFixed(3)); } catch (e) {}
+  }
+  function clearCrashGuard() {
+    N.proven = true;
+    try { localStorage.removeItem('readfast:voice:loading'); localStorage.removeItem('readfast:voice:crashed'); } catch (e) {}
+    VOICE_CRASHED = false;
+  }
+
+  // ---- natural voice: playback
+  // One <audio> element for the whole session. A media element rather than Web
+  // Audio because iOS mutes Web Audio when the ring/silent switch is on, but
+  // lets a media element through — a reader with the phone on silent still
+  // hears the book. iOS also only lets a page start sound inside a tap, and the
+  // first sentence takes a moment to prepare, so the element is unlocked with a
+  // tenth of a second of silence during the tap itself.
+  var voiceAudio = null, primerUrl = null;
+  function audioEl() {
+    if (!voiceAudio) {
+      voiceAudio = new Audio();
+      voiceAudio.preload = 'auto';
+      voiceAudio.addEventListener('ended', onChunkEnded);
+    }
+    return voiceAudio;
+  }
+  function primeAudio() {
+    var a = audioEl();
+    if (!primerUrl) primerUrl = URL.createObjectURL(wavBlob(new Float32Array(2400), 24000));
+    a.src = primerUrl;
+    try { var p = a.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+  }
+  function wavBlob(samples, rate) {
+    var n = samples.length, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    function str(o, s) { for (var i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
+    str(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); str(8, 'WAVE'); str(12, 'fmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    str(36, 'data'); v.setUint32(40, n * 2, true);
+    for (var i = 0, o = 44; i < n; i++, o += 2) {
+      var s = samples[i]; s = s > 1 ? 1 : s < -1 ? -1 : (s || 0);
+      v.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    return new Blob([buf], { type: 'audio/wav' });
+  }
+  function playChunk() {
+    if (!L.speaking) return;
+    var c = L.queue[0];
+    if (!c) { listenFinished(); return; }
+    if (!c.ready) { L.waiting = true; renderListenStatus(); pumpNatural(); return; }
+    L.waiting = false;
+    L.queue.shift();
+    L.current = c;
+    var a = audioEl();
+    a.src = c.url;
+    try {
+      var p = a.play();
+      if (p && p.catch) p.catch(function (err) {
+        if (!L.speaking) return;
+        if (err && err.name === 'NotAllowedError') stopWithMessage('Tap play to start the voice.');
+      });
+    } catch (e) {}
+    moveTo(c.a, true);
+    renderListenStatus();
+    startSync();
+    pumpNatural();
+  }
+  function onChunkEnded() {
+    if (!L.speaking || voicePrefs.engine !== 'natural') return;
+    var c = L.current;
+    if (!c) { playChunk(); return; }          // the silent primer finished first
+    if (c.url) URL.revokeObjectURL(c.url);
+    L.current = null;
+    moveTo(c.b, true);
+    if (R.idx >= R.words.length) { listenFinished(); return; }
+    playChunk();
+  }
+
+  // ---- device voice
+  // Apple preloads a set of novelty voices (Bad News, Bubbles, Zarvox…) and a
+  // robotic "Eloquence" family; none belong anywhere near a book.
+  var NOVELTY_VOICE = /^(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley|Fred|Junior|Ralph|Kathy)\b/;
+  function deviceVoices() {
+    if (!('speechSynthesis' in window)) return [];
+    var list = [];
+    try { list = speechSynthesis.getVoices() || []; } catch (e) { list = []; }
+    list = list.filter(function (v) {
+      return /^en([-_]|$)/i.test(v.lang || '') && v.localService !== false && !NOVELTY_VOICE.test(v.name || '');
+    });
+    function rank(v) { var n = v.name || ''; return /premium/i.test(n) ? 0 : /enhanced|neural|natural|siri/i.test(n) ? 1 : 2; }
+    return list.sort(function (x, y) { return rank(x) - rank(y) || String(x.name).localeCompare(String(y.name)); });
+  }
+  function pickDeviceVoice() {
+    var list = deviceVoices();
+    for (var i = 0; i < list.length; i++) if (list[i].voiceURI === voicePrefs.device) return list[i];
+    return list[0] || null;
+  }
+  function charStarts(c) {
+    var starts = [], pos = 0;
+    for (var i = c.a; i < c.b; i++) { starts.push(pos); pos += R.words[i].length + 1; }
+    return starts;
+  }
+  function devSpeak() {
+    if (!L.speaking) return;
+    fillQueue();
+    var c = L.queue.shift();
+    if (!c) { listenFinished(); return; }
+    var v = pickDeviceVoice();
+    var u = new SpeechSynthesisUtterance(c.text);
+    if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-US';
+    u.rate = voicePrefs.speed;
+    var ep = L.epoch, starts = charStarts(c);
+    // expected length, for voices that never report word boundaries
+    c.dev = { start: 0, boundary: false, est: Math.max(0.5, (c.b - c.a) / (WPM_AT_1X * voicePrefs.speed) * 60) };
+    u.onstart = function () { if (ep === L.epoch) c.dev.start = nowMs(); };
+    u.onboundary = function (e) {
+      if (ep !== L.epoch || (e.name && e.name !== 'word')) return;
+      c.dev.boundary = true;
+      var k = 0;
+      while (k < starts.length - 1 && starts[k + 1] <= e.charIndex) k++;
+      moveTo(c.a + k);
+    };
+    u.onend = function () {
+      if (ep !== L.epoch) return;
+      if (c.dev.start) noteSpoken(c, (nowMs() - c.dev.start) / 1000);
+      L.current = null;
+      moveTo(c.b, true);
+      if (R.idx >= R.words.length) listenFinished(); else devSpeak();
+    };
+    u.onerror = function (e) {
+      if (ep !== L.epoch) return;
+      if (e && (e.error === 'interrupted' || e.error === 'canceled')) return;
+      stopWithMessage('The device voice stopped' + (e && e.error ? ' (' + e.error + ')' : '') + '.');
+    };
+    L.current = c;
+    moveTo(c.a, true);
+    try { speechSynthesis.speak(u); } catch (e) { stopWithMessage('This browser would not speak.'); return; }
+    renderListenStatus();
+    startSync();
+  }
+
+  // ---- keeping the word on screen in step with the voice
+  // Kokoro gives no word timings, so a word's share of a sentence is estimated
+  // from its syllables plus the pause its punctuation earns. The device voice
+  // reports word boundaries on most platforms; the clock only stands in for
+  // the voices that never send them.
+  function startSync() { if (!L.raf) L.raf = requestAnimationFrame(syncFrame); }
+  function stopSync() { if (L.raf) cancelAnimationFrame(L.raf); L.raf = 0; }
+  function syncFrame() {
+    L.raf = 0;
+    if (!L.speaking) return;
+    var c = L.current, frac = -1;
+    if (c) {
+      if (voicePrefs.engine === 'natural' && voiceAudio && c.dur) frac = voiceAudio.currentTime / c.dur;
+      else if (c.dev && c.dev.start && !c.dev.boundary) {
+        var secs = (nowMs() - c.dev.start) / 1000;
+        if (secs > 0.7) frac = secs / c.dev.est;
+      }
+    }
+    if (frac >= 0) {
+      var target = c.total * Math.min(1, frac), k = 0;
+      while (k < c.cum.length - 1 && c.cum[k] < target) k++;
+      moveTo(c.a + k);
+    }
+    L.raf = requestAnimationFrame(syncFrame);
+  }
+  function moveTo(i, force) {
+    i = Math.max(0, Math.min(R.words.length, i));
+    if (i === R.idx && !force) return;
+    var jumped = Math.abs(i - R.idx) > 1;
+    R.idx = i;
+    showWord();
+    if (force || jumped || i % 20 === 0) updateHUD(); else miniHighlight();
+    if (i % 25 === 0) saveProgress(false);
+  }
+
+  // ---- controls
+  function listenPlay() {
+    if (L.speaking || !R.book) return;
+    if (!voicePrefs.engine) { openVoicePanel(); return; }
+    if (voicePrefs.engine === 'natural' && (naturalUnavailableReason() || VOICE_CRASHED)) { openVoicePanel(); return; }
+    if (voicePrefs.engine === 'device' && !deviceVoices().length) { openVoicePanel(); return; }
+    if (R.idx >= R.words.length) R.idx = 0;
+    else if (R.rewindArmed) R.idx = resumePoint(R.idx);
+    R.rewindArmed = false;
+    L.epoch++;
+    L.speaking = true;
+    L.queue = []; L.current = null; L.nextStart = R.idx; L.waiting = false;
+    holdScreenAwake();
+    setPlayIcon(true);
+    el.context.textContent = '';
+    el.hint.classList.add('hidden');
+    setMediaSession(true);
+    if (voicePrefs.engine === 'device') {
+      try { speechSynthesis.cancel(); } catch (e) {}
+      devSpeak();
+    } else {
+      primeAudio();
+      L.waiting = true;
+      fillQueue();
+      var ep = L.epoch;
+      naturalLoad().then(function () { pumpNatural(); }, function (err) {
+        if (L.speaking && ep === L.epoch && err && err.message !== 'stopped') stopWithMessage(err.message);
+      });
+    }
+    renderListenStatus();
+    updateHUD();
+  }
+  // Stop sound and drop everything prepared. The engine itself stays loaded.
+  function haltVoice() {
+    L.speaking = false;
+    L.epoch++;
+    L.waiting = false;
+    stopSync();
+    if (voiceAudio) { try { voiceAudio.pause(); } catch (e) {} }
+    if ('speechSynthesis' in window) { try { speechSynthesis.cancel(); } catch (e) {} }
+    L.queue.forEach(function (c) { if (c.url) URL.revokeObjectURL(c.url); });
+    if (L.current && L.current.url) URL.revokeObjectURL(L.current.url);
+    L.queue = []; L.current = null;
+    setMediaSession(false);
+  }
+  function listenPause() {
+    if (!L.speaking) return;
+    var at = R.idx;
+    haltVoice();
+    R.idx = at;
+    R.rewindArmed = true;        // pressing play again resumes at the sentence start
+    setPlayIcon(false);
+    letScreenSleep();
+    showWord();
+    updateHUD();
+    saveProgress(true);
+  }
+  function listenFinished() {
+    haltVoice();
+    R.idx = R.words.length;
+    R.rewindArmed = false;
+    setPlayIcon(false);
+    letScreenSleep();
+    showWord();
+    updateHUD();
+    saveProgress(true);
+  }
+  function stopWithMessage(msg) {
+    listenPause();
+    toast('').error(msg);
+    renderVoicePanel();
+  }
+  function restartListening(i) {
+    var was = L.speaking;
+    if (was) haltVoice();
+    R.idx = Math.max(0, Math.min(R.words.length, i));
+    R.rewindArmed = false;            // an explicit jump means exactly here
+    if (was) listenPlay();
+    else { showWord(); updateHUD(); saveProgress(true); }
+  }
+  function setListenSpeed(v) {
+    v = clampSpeed(v);
+    if (v === voicePrefs.speed) { updateHUD(); return; }
+    voicePrefs.speed = v;
+    saveVoicePrefs();
+    // The natural voice bakes speed into the audio it makes, so what is already
+    // prepared is at the old pace: start again from the word being spoken.
+    if (L.speaking) restartListening(R.idx);
+    updateHUD();
+  }
+  function nudgeSpeed(dir) {
+    if (L.on) { setListenSpeed(voicePrefs.speed + dir * SPEED_STEP); return fmtSpeed(voicePrefs.speed); }
+    setWpm(settings.wpm + dir * STEP);
+    return settings.wpm + ' wpm';
+  }
+  function running() { return L.on ? L.speaking : R.playing; }
+  function setPlayIcon(on) {
+    el.playIcon.innerHTML = on ? '<use href="#i-pause"/>' : '<use href="#i-play"/>';
+    el.play.setAttribute('aria-label', on ? 'Pause' : 'Play');
+  }
+  function setMediaSession(on) {
+    try {
+      if (!('mediaSession' in navigator)) return;
+      if (on && R.book && typeof MediaMetadata === 'function') {
+        navigator.mediaSession.metadata = new MediaMetadata({ title: R.book.title, artist: 'Read Fast' });
+        navigator.mediaSession.setActionHandler('play', function () { listenPlay(); });
+        navigator.mediaSession.setActionHandler('pause', function () { listenPause(); });
+      }
+      navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
+    } catch (e) {}
+  }
+
+  function setListenMode(on) {
+    on = !!on;
+    if (on === L.on) return;
+    if (R.playing) pause();
+    if (L.speaking) listenPause();
+    L.on = on;
+    try { localStorage.setItem('readfast:listen', on ? '1' : '0'); } catch (e) {}
+    el.listenBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    el.listenBtn.setAttribute('aria-label', on ? 'Listen mode is on — switch back to reading' : 'Listen — read the book aloud');
+    el.reader.classList.toggle('listening', on);
+    renderPresets(true);
+    updateHUD();
+    if (on) {
+      if (!voicePrefs.engine) openVoicePanel();
+      else warmVoice();
+      if (R.book) cue('Listen');
+    } else {
+      // Give the memory back: on a phone the loaded engine holds a lot of it.
+      unloadNatural();
+      if (R.book) cue('Read');
+    }
+  }
+  // Start loading the engine as soon as Listen is chosen, if it has been
+  // downloaded before — so by the time play is pressed it is warm.
+  function warmVoice() {
+    if (L.on && voicePrefs.engine === 'natural' && naturalWasReady() && !VOICE_CRASHED && !naturalUnavailableReason()) {
+      naturalLoad().catch(function () {});
+    }
+  }
+  function renderListenStatus() {
+    if (!L.on) return;
+    el.statusSub.textContent = L.speaking ? (L.waiting ? (N.state === 'loading' ? 'Starting the voice…' : 'Preparing…') : 'Listening')
+                                          : (R.idx >= R.words.length ? 'Finished' : 'Paused');
+  }
+  function currentVoiceName() {
+    if (voicePrefs.engine === 'device') {
+      var v = pickDeviceVoice();
+      return v ? v.name.replace(/\s*\(.*\)\s*$/, '') : 'Device voice';
+    }
+    for (var i = 0; i < NATURAL_VOICES.length; i++) if (NATURAL_VOICES[i].id === voicePrefs.natural) return NATURAL_VOICES[i].name;
+    return 'Choose a voice';
+  }
+
+  // ---- the voice panel
+  var PREVIEW = { id: 0 };
+  var PREVIEW_TEXT = 'Here is how this voice sounds. Read Fast reads your book aloud from wherever you are, and the word on screen follows along.';
+  var panelEngine = '';
+  function openVoicePanel() {
+    if (L.speaking) listenPause();
+    panelEngine = voicePrefs.engine || (naturalUnavailableReason() || VOICE_CRASHED ? 'device' : 'natural');
+    el.voice.classList.remove('hidden');
+    renderVoicePanel();
+    trapFocus(el.voice, el.voiceGo);
+  }
+  function closeVoicePanel() {
+    el.voice.classList.add('hidden');
+    releaseFocus(el.voice);
+    stopPreview();
+  }
+  function renderVoiceStatus() {
+    if (el.voice.classList.contains('hidden')) return;
+    var why = naturalUnavailableReason();
+    var st;
+    if (why) st = why;
+    else if (N.state === 'loading') st = (N.pct ? 'Downloading… ' + N.pct + '%' : (naturalWasReady() ? 'Starting…' : 'Preparing the download…'));
+    else if (N.state === 'error') st = N.error;
+    // the crash outranks "downloaded": the files being here is not the problem
+    else if (VOICE_CRASHED && N.state !== 'ready') st = 'It stopped before it finished loading last time — the app was closed, or this device ran out of memory.';
+    else if (N.state === 'ready' || naturalWasReady()) st = 'Downloaded — works offline';
+    else st = 'One-time download of about ' + NATURAL_MB + ' MB, then works offline.';
+    el.engNaturalStatus.textContent = st;
+    el.engNaturalBar.classList.toggle('hidden', N.state !== 'loading');
+    el.engNaturalBar.firstElementChild.style.width = (N.state === 'loading' ? Math.max(3, N.pct) : 0) + '%';
+    var n = deviceVoices().length;
+    el.engDeviceStatus.textContent = !('speechSynthesis' in window) ? 'This browser has no speech voices.'
+      : n ? n + ' English voice' + (n === 1 ? '' : 's') + ' on this device'
+          : 'No on-device English voice in this browser.';
+    renderVoiceActions();
+  }
+  function renderVoicePanel() {
+    if (el.voice.classList.contains('hidden')) return;
+    var why = naturalUnavailableReason();
+    el.engNatural.setAttribute('aria-checked', panelEngine === 'natural' ? 'true' : 'false');
+    el.engDevice.setAttribute('aria-checked', panelEngine === 'device' ? 'true' : 'false');
+    el.engNatural.classList.toggle('off', !!why);
+    renderVoiceStatus();
+    // the voices of the chosen engine
+    el.voiceList.innerHTML = '';
+    var items = [];
+    if (panelEngine === 'natural') {
+      items = NATURAL_VOICES.map(function (v, i) { return { key: v.id, name: v.name, note: v.note + (i === 0 ? ' · the most natural' : ''), on: v.id === voicePrefs.natural }; });
+    } else {
+      var cur = pickDeviceVoice();
+      items = deviceVoices().slice(0, 12).map(function (v) {
+        return { key: v.voiceURI, name: v.name.replace(/\s*\(.*\)\s*$/, ''), note: v.lang + (/premium|enhanced/i.test(v.name) ? ' · enhanced' : ''), on: cur && v.voiceURI === cur.voiceURI };
+      });
+    }
+    items.forEach(function (it) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'vopt';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', it.on ? 'true' : 'false');
+      var nm = document.createElement('b'); nm.textContent = it.name;
+      var nt = document.createElement('span'); nt.textContent = it.note;
+      b.appendChild(nm); b.appendChild(nt);
+      b.addEventListener('click', function () {
+        if (panelEngine === 'natural') voicePrefs.natural = it.key; else voicePrefs.device = it.key;
+        saveVoicePrefs();
+        renderVoicePanel();
+        updateHUD();
+      });
+      el.voiceList.appendChild(b);
+    });
+    el.voiceList.classList.toggle('hidden', !items.length);
+    renderVoiceActions();
+  }
+  function renderVoiceActions() {
+    var natural = panelEngine === 'natural';
+    var why = natural ? naturalUnavailableReason() : (deviceVoices().length ? '' : 'none');
+    var ready = natural ? N.state === 'ready' : true;
+    var go = el.voiceGo, pv = el.voicePreview;
+    go.disabled = false; pv.disabled = false;
+    go.classList.toggle('busy', natural && N.state === 'loading');
+    if (why) { go.textContent = 'Start listening'; go.disabled = true; pv.disabled = true; }
+    else if (natural && N.state === 'loading') { go.textContent = N.pct ? 'Downloading ' + N.pct + '%' : 'Starting…'; go.disabled = true; pv.textContent = 'Cancel'; }
+    else if (natural && !ready && !naturalWasReady()) { go.textContent = 'Download voice · ' + NATURAL_MB + ' MB'; pv.disabled = true; }
+    else if (natural && (N.state === 'error' || VOICE_CRASHED)) { go.textContent = 'Try again'; pv.disabled = true; }
+    else { go.textContent = 'Start listening'; }
+    if (!(natural && N.state === 'loading')) pv.textContent = PREVIEW.playing ? 'Stop' : 'Preview';
+    // the honest line about speed, once there is a measurement to be honest about
+    var note = '';
+    if (natural && !why) {
+      var rtf = L.rtf.length ? L.rtf.slice().sort(function (a, b) { return a - b; })[Math.floor(L.rtf.length / 2)] : savedRtf();
+      if (rtf && rtf < 0.9) note = 'On this device the natural voice prepares speech ' + (1 / rtf).toFixed(1) + '× faster than it speaks, so it will play without gaps.';
+      else if (rtf) note = 'This device prepares the natural voice slower than it speaks, so expect short pauses between sentences. The device voice plays without them.';
+      else note = 'The voice is made on this device, so your book never leaves it. The model downloads once from Hugging Face and the engine from jsDelivr; nothing else is sent.';
+    } else if (!natural && !why) {
+      note = 'Uses only voices that run on this device, so the text being read stays here. Keep Read Fast open while it reads.';
+    }
+    el.voiceNote.textContent = note;
+    el.voiceRemove.classList.toggle('hidden', !(natural && (naturalWasReady() || N.state === 'ready') && N.state !== 'loading'));
+  }
+  function chooseEngine(which) {
+    if (which === 'natural' && naturalUnavailableReason()) return;
+    panelEngine = which;
+    stopPreview();
+    renderVoicePanel();
+  }
+  function voiceGo() {
+    var natural = panelEngine === 'natural';
+    if (natural && N.state === 'loading') return;
+    if (natural && N.state !== 'ready') {
+      // Downloading is its own explicit step — 117 MB is not something to start
+      // behind someone's back on a phone plan.
+      if (!naturalWasReady() || N.state === 'error' || VOICE_CRASHED) {
+        clearCrashGuardForRetry();
+        naturalLoad().then(renderVoicePanel, renderVoicePanel);
+        renderVoicePanel();
+        return;
+      }
+    }
+    voicePrefs.engine = panelEngine;
+    saveVoicePrefs();
+    closeVoicePanel();
+    if (!L.on) setListenMode(true);
+    renderPresets(true);
+    updateHUD();
+    listenPlay();
+  }
+  function clearCrashGuardForRetry() {
+    try { localStorage.removeItem('readfast:voice:crashed'); } catch (e) {}
+    VOICE_CRASHED = false;
+  }
+
+  function stopPreview() {
+    PREVIEW.id = 0;
+    if (PREVIEW.playing) {
+      PREVIEW.playing = false;
+      if (voiceAudio && !L.speaking) { try { voiceAudio.pause(); } catch (e) {} }
+      try { if (!L.speaking && 'speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) {}
+    }
+    if (!el.voice.classList.contains('hidden')) renderVoiceActions();
+  }
+  function previewVoice() {
+    if (panelEngine === 'natural' && N.state === 'loading') {   // the button reads Cancel
+      unloadNatural(); N.state = 'idle';
+      guardOff();
+      renderVoicePanel();
+      return;
+    }
+    if (PREVIEW.playing) { stopPreview(); return; }
+    PREVIEW.playing = true;
+    renderVoiceActions();
+    if (panelEngine === 'device') {
+      try {
+        speechSynthesis.cancel();
+        var u = new SpeechSynthesisUtterance(PREVIEW_TEXT), v = pickDeviceVoice();
+        if (v) { u.voice = v; u.lang = v.lang; }
+        u.rate = voicePrefs.speed;
+        u.onend = u.onerror = function () { PREVIEW.playing = false; renderVoiceActions(); };
+        speechSynthesis.speak(u);
+      } catch (e) { PREVIEW.playing = false; renderVoiceActions(); }
+      return;
+    }
+    primeAudio();                                         // inside the tap, for iOS
+    naturalLoad().then(function () {
+      if (!PREVIEW.playing) return;
+      PREVIEW.id = ++N.seq;
+      guardOn();
+      PREVIEW.t = nowMs();
+      N.inflight = PREVIEW.id;
+      clearTimeout(N.genTimer);
+      N.genTimer = setTimeout(function () { naturalFail('This device took too long to prepare the preview.'); }, GEN_LIMIT_MS);
+      N.worker.postMessage({ type: 'gen', id: PREVIEW.id, text: PREVIEW_TEXT, voice: voicePrefs.natural, speed: voicePrefs.speed });
+    }, function () { PREVIEW.playing = false; renderVoicePanel(); });
+  }
+  function playPreviewAudio(m) {
+    var dur = m.samples.length / m.rate;
+    recordRtf(m.ms, dur);
+    clearCrashGuard();
+    PREVIEW.id = 0;
+    if (!PREVIEW.playing || L.speaking) { renderVoiceActions(); return; }
+    var a = audioEl(), url = URL.createObjectURL(wavBlob(m.samples, m.rate));
+    a.src = url;
+    var done = function () { a.removeEventListener('ended', done); URL.revokeObjectURL(url); PREVIEW.playing = false; renderVoiceActions(); };
+    a.addEventListener('ended', done);
+    try { var p = a.play(); if (p && p.catch) p.catch(done); } catch (e) { done(); }
+    renderVoiceActions();
+  }
+  // Hand the 117 MB back. Everything the natural voice stored lives in three
+  // caches of its own, so removing it touches nothing else.
+  function removeNaturalVoice() {
+    unloadNatural();
+    N.state = 'idle'; N.pct = 0; N.error = '';
+    try {
+      ['readfast:voice:ready', 'readfast:voice:rtf', 'readfast:voice:loading', 'readfast:voice:crashed'].forEach(function (k) { localStorage.removeItem(k); });
+    } catch (e) {}
+    L.rtf = [];
+    var gone = window.caches ? Promise.all(VOICE_CACHES.map(function (n) { return caches.delete(n).catch(function () {}); })) : Promise.resolve();
+    gone.then(function () {
+      if (voicePrefs.engine === 'natural') { voicePrefs.engine = ''; saveVoicePrefs(); }
+      renderVoicePanel();
+      toast('').done('Removed the natural voice from this device.');
+      refreshStorageNote();
+    });
+  }
+  function refreshStorageNote() {
+    try { if (typeof renderLibrary === 'function' && el.reader.classList.contains('hidden')) renderLibrary(); } catch (e) {}
+  }
+
+  function initListen() {
+    L.on = false;
+    var want = false;
+    try { want = localStorage.getItem('readfast:listen') === '1'; } catch (e) {}
+    if (want) {
+      L.on = true;
+      el.listenBtn.setAttribute('aria-pressed', 'true');
+      el.listenBtn.setAttribute('aria-label', 'Listen mode is on — switch back to reading');
+      el.reader.classList.add('listening');
+    }
+    // Chrome fills the voice list late; the panel redraws when it arrives.
+    if ('speechSynthesis' in window) {
+      try { speechSynthesis.addEventListener('voiceschanged', function () { renderVoicePanel(); updateHUD(); }); } catch (e) {}
+      try { speechSynthesis.getVoices(); } catch (e) {}
+    }
+  }
+
 
   // ---------- Installing and staying offline ----------
   // Only on a real origin: the artifact viewer has no origin of its own to
@@ -4218,8 +5189,17 @@
   el.skipBack.addEventListener('click', function () { seek(R.idx - SKIP); });
   el.skipFwd.addEventListener('click', function () { seek(R.idx + SKIP); });
   el.restart.addEventListener('click', function () { seek(0); });
-  el.wpmDown.addEventListener('click', function () { setWpm(settings.wpm - STEP); });
-  el.wpmUp.addEventListener('click', function () { setWpm(settings.wpm + STEP); });
+  el.wpmDown.addEventListener('click', function () { nudgeSpeed(-1); });
+  el.wpmUp.addEventListener('click', function () { nudgeSpeed(1); });
+  el.listenBtn.addEventListener('click', function () { setListenMode(!L.on); });
+  el.voiceChip.addEventListener('click', openVoicePanel);
+  el.engNatural.addEventListener('click', function () { chooseEngine('natural'); });
+  el.engDevice.addEventListener('click', function () { chooseEngine('device'); });
+  el.voicePreview.addEventListener('click', previewVoice);
+  el.voiceGo.addEventListener('click', voiceGo);
+  el.voiceClose.addEventListener('click', closeVoicePanel);
+  el.voiceRemove.addEventListener('click', removeNaturalVoice);
+  el.voice.addEventListener('click', function (e) { if (e.target === el.voice) closeVoicePanel(); });
   el.track.addEventListener('click', function (e) {
     var r = el.track.getBoundingClientRect();
     seek(Math.floor((e.clientX - r.left) / r.width * R.words.length));
@@ -4280,6 +5260,10 @@
       if (e.key === 'Escape') { e.preventDefault(); closeHelp(); }
       return;
     }
+    if (!el.voice.classList.contains('hidden')) {
+      if (e.key === 'Escape') { e.preventDefault(); closeVoicePanel(); }
+      return;
+    }
     if (e.key === '?' && !/^(INPUT|TEXTAREA)$/.test((e.target.tagName || ''))) { e.preventDefault(); openHelp(); return; }
     if (confirmResolve) { if (e.key === 'Escape') { e.preventDefault(); settleConfirm(confirmCancelValue); } return; }
     if (el.reader.classList.contains('hidden')) {
@@ -4301,8 +5285,9 @@
       case ' ': case 'k': e.preventDefault(); toggle(); break;
       case 'ArrowLeft': case 'j': e.preventDefault(); seek(R.idx - SKIP); break;
       case 'ArrowRight': case 'l': e.preventDefault(); seek(R.idx + SKIP); break;
-      case 'ArrowUp': e.preventDefault(); setWpm(settings.wpm + STEP); break;
-      case 'ArrowDown': e.preventDefault(); setWpm(settings.wpm - STEP); break;
+      case 'ArrowUp': e.preventDefault(); nudgeSpeed(1); break;
+      case 'ArrowDown': e.preventDefault(); nudgeSpeed(-1); break;
+      case 'v': case 'V': e.preventDefault(); setListenMode(!L.on); break;
       case 'p': case 'P': e.preventDefault(); openPageView(); break;
       case 'Escape': closeBook(); break;
     }
@@ -4318,6 +5303,7 @@
   initServiceWorker();
   initInstall();
   initTouch();
+  initListen();
   noteUpdated();
   renderLibrary();
 })();

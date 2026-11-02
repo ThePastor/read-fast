@@ -9,7 +9,7 @@
  * previous cache in activate(). The page is told when a new worker is waiting
  * and offers a Reload, rather than swapping the app out underneath the reader.
  */
-var VERSION = 'v28';
+var VERSION = 'v29';
 var CACHE = 'read-fast-' + VERSION;
 var DOC = new URL('./', self.location).href;
 var SHELL = [
@@ -37,6 +37,19 @@ function isFont(u) {
   return u.hostname === 'fonts.googleapis.com' || u.hostname === 'fonts.gstatic.com';
 }
 
+// The natural voice's engine and WebAssembly runtime, pinned to exact versions.
+// Pinned URLs never change, so they are kept cache-first in a cache of their
+// own that a release does NOT retire — re-downloading 24 MB on every app update
+// would be indefensible. (The 92 MB model and the voices are cached by the
+// engine itself, in 'transformers-cache' and 'kokoro-voices'; this worker lets
+// those requests pass straight through rather than storing them twice.)
+var VOICE_CACHE = 'readfast-voice-engine-1';
+function isVoiceEngine(u) {
+  return u.hostname === 'cdn.jsdelivr.net' &&
+    (u.pathname.indexOf('/npm/kokoro-js@1.2.1/') === 0 ||
+     u.pathname.indexOf('/npm/@huggingface/transformers@3.5.1/') === 0);
+}
+
 self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET') return;
@@ -53,6 +66,19 @@ self.addEventListener('fetch', function (e) {
           if (res && (res.ok || res.type === 'opaque')) cache.put(req, res.clone());
           return res;
         }).catch(function () { return hit || Response.error(); });
+      });
+    }));
+    return;
+  }
+
+  if (isVoiceEngine(url)) {
+    e.respondWith(caches.open(VOICE_CACHE).then(function (cache) {
+      return cache.match(req).then(function (hit) {
+        if (hit) return hit;
+        return fetch(req).then(function (res) {
+          if (res && res.ok) cache.put(req, res.clone());
+          return res;
+        });
       });
     }));
     return;

@@ -59,7 +59,9 @@ a claim of ours — that is what makes it useful as evidence.
 | v13 | 1 Sep 2026 | `91860deffc88a45110f837c9be22b6fbbafde770` | Wordmark rebuilt as live text |
 | v14 | 1 Sep 2026 | `54a71d391f741299fa6e48f4a69f0aad86af1f2a` | Head tags restored |
 | v15 | 4 Sep 2026 | `6bed76ccebb2b6eba326f12142e3e856f00f7844` | Installable PWA, home-screen icon set |
-| v16 | 4 Sep 2026 | *(this release)* | Licence, terms, notices, ownership record |
+| v16 | 4 Sep 2026 | *(see GitHub history)* | Licence, terms, notices, ownership record |
+| v17–v28 | 4 Sep – 2 Nov 2026 | *(rows not recorded at the time — GitHub's commit history holds each one)* | Touch, storage, pacing, statistics, Tier D, update card, safe areas, link previews, JohnsonX Labs |
+| v29 | 2 Nov 2026 | *(the commit that adds this row)* | **Listen**: the book read aloud by an on-device voice. `index.html` SHA-256 `91029f0aff60fe4c57faeb55bf47407b5a4cfd66713d4edd8e0df3ac8e3ffe86` · `sw.js` `bcdc7dd7c3250f5357c3ae6c84dad274c6a7878780a74f09e31f8fb7f0e04555` |
 
 ---
 
