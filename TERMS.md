@@ -42,7 +42,7 @@ Four destinations always, and three more only if you choose to download the natu
 | # | What | Where it goes | What is sent | After the first time |
 |---|---|---|---|---|
 | 5 | The voice engine and its WebAssembly runtime (about 24 MB) | `cdn.jsdelivr.net` (jsDelivr) | Your IP address, User-Agent and referring page — the standard information any server receives | Kept in your browser's cache; no further request |
-| 6 | The voice model and the voice you pick (about 93 MB, or 326 MB for the full-quality build offered to devices that can run it) | `huggingface.co` (Hugging Face) | Same as #5 | Kept in your browser's cache; no further request |
+| 6 | The voice model and the voice you pick (about 93 MB, or 326 MB for the full-quality build offered to computers; phones and tablets always get the smaller one) | `huggingface.co` (Hugging Face) | Same as #5 | Kept in your browser's cache; no further request |
 | 7 | The same files — Hugging Face hands the download to its file CDN | `*.cdn.hf.co`, e.g. `us.aws.cdn.hf.co` (Hugging Face) | Same as #5 | As #6 |
 
 These are downloads of public files that are the same for everyone. **The text of your book is never sent to any of them** — the voice runs on your device, after the download.

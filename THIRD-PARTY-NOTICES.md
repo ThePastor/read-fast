@@ -11,8 +11,8 @@ not.
 Nothing in Read Fast's own proprietary licence restricts your rights under the
 licences below, with respect to the components they cover.
 
-Last verified against the shipped build: **v31, 17 November 2026**
-(`index.html`, SHA-256 `ca3a7fec7ce3f01d742952bae7e1c8d41cdb519012aa8c0d516a0f024cd6f6f3`)
+Last verified against the shipped build: **v32, 17 November 2026**
+(`index.html`, SHA-256 `9249bcc60220ef40c65a7796aa3936c98f25f4847a2dccd37a1dbbeafb2eeb60`)
 
 ---
 

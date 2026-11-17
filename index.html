@@ -61,7 +61,7 @@
 </style>
 </head>
 <body>
-<script>window.BUILD={v:'v31',date:'17 November 2026'};</script>
+<script>window.BUILD={v:'v32',date:'17 November 2026'};</script>
 
 
 <style>
@@ -1786,6 +1786,7 @@
      release, in plain words, newest first. Trim the tail past a dozen — nobody
      reads further back than that. */
   var WHATS_NEW = [
+    ['v32', 'Fixes Read Fast closing on iPhone after the voice download. v31 gave phones the large full-quality voice, which needs more memory than iOS allows one page. Phones and tablets now always use the phone-sized voice: if your phone has the large one, it is removed (freeing 326 MB) and the voice panel offers the phone voice to download. Computers keep the full-quality voice.'],
     ['v31', 'On phones, tapping the page number opens the page view, with a slider across the whole book, and the reader no longer zooms in. The natural voice download now survives the screen locking and carries on where it stopped. On iPhone and iPad the voice keeps reading with the screen off, with controls on the lock screen. Where the graphics chip can run it, a clearer full-quality voice runs nine times faster than speech — no more pauses.'],
     ['v30', 'The natural voice reads straight through: it now runs on several processor cores where your browser allows, starts within a couple of seconds, plays sentence after sentence without gaps, and picks up at once when you resume.'],
     ['v29', 'Listen: Read Fast can now read your book aloud, in a natural voice that runs on your own device — your book never leaves it — or your device’s built-in voice. Choose from 0.75× to 2×, and the word on screen follows along.'],
@@ -4252,17 +4253,52 @@
   }
   function gpuAllowed() { return !!GPU.ok && lsGet('readfast:voice:gpu') !== 'off'; }
   var COARSE_POINTER = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+  // v32: phones and tablets get the 8-bit build, on the processor, always.
+  // v31 offered the full build to any device with WebGPU — and iOS 26 has
+  // WebGPU — so an iPhone downloaded the 326 MB build, and loading it (the
+  // file, the engine's copy of it, the graphics chip's copy) went past the
+  // ~2 GB iOS lets one page use. iOS then closes the page: "A problem
+  // repeatedly occurred". The 8-bit build needs a fraction of that.
+  var PHONE = COARSE_POINTER || /iP(hone|od|ad)|Android/.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  // A phone that got the full build from v31: put it right before anything can
+  // load it. The settings go at once (so nothing tries), the 326 MB file and
+  // any pieces of it after — and the voice panel says why, and offers the
+  // phone build as its own download (never started for the reader).
+  (function () {
+    if (!PHONE) return;
+    var hadFull = lsGet('readfast:voice:variant') === 'full';
+    if (hadFull) {
+      ['readfast:voice:variant', 'readfast:voice:ready', 'readfast:voice:loading', 'readfast:voice:crashed',
+       'readfast:voice:gpu', 'readfast:voice:fulloff'].forEach(function (k) { lsSet(k, null); });
+      lsSet('readfast:voice:toobig', '1');
+      VOICE_CRASHED = false;
+    }
+    lsSet('readfast:voice:rtf:full:gpu', null); lsSet('readfast:voice:rtf:full:mt', null); lsSet('readfast:voice:rtf:full:st', null);
+    if (!window.caches) return;
+    var full = KOKORO_FILES + VARIANTS.full.file;
+    caches.open('transformers-cache').then(function (c) {
+      return c.delete(full).then(function (gone) { if (gone && !hadFull) lsSet('readfast:voice:toobig', '1'); });
+    }).catch(function () {});
+    caches.has(PARTS_CACHE).then(function (has) {
+      if (!has) return;
+      return caches.open(PARTS_CACHE).then(function (c) {
+        return c.keys().then(function (ks) { return Promise.all(ks.filter(function (r) { return r.url.indexOf(full) === 0; }).map(function (r) { return c.delete(r); })); });
+      });
+    }).catch(function () {});
+  })();
   // The build this device has, and the one it should have.
   function installedVariant() {
     var v = lsGet('readfast:voice:variant');
+    if (PHONE && v === 'full') return '';
     return VARIANTS[v] ? v : (naturalWasReady() ? 'standard' : '');
   }
   function wantedVariant() {
-    if (lsGet('readfast:voice:fulloff') === '1') return 'standard';
-    return (gpuAllowed() || !COARSE_POINTER) ? 'full' : 'standard';
+    if (PHONE || lsGet('readfast:voice:fulloff') === '1') return 'standard';
+    return 'full';
   }
   // the chip a load of build v will use
-  function deviceFor(v) { return v === 'full' && gpuAllowed() ? 'webgpu' : 'wasm'; }
+  function deviceFor(v) { return v === 'full' && gpuAllowed() && !PHONE ? 'webgpu' : 'wasm'; }
   function manyCores() { return !!window.crossOriginIsolated && typeof SharedArrayBuffer === 'function' && !VOICE_ONE_CORE; }
   function naturalWasReady() {
     try { return localStorage.getItem('readfast:voice:ready') === '1'; } catch (e) { return false; }
@@ -4587,6 +4623,7 @@
       DL.active = false; DL.upgrade = false;
       lsSet('readfast:voice:variant', v);
       lsSet('readfast:voice:ready', '1');
+      lsSet('readfast:voice:toobig', null);
       if (!R.playing && !L.speaking) letScreenSleep();
       if (upgrade) { if (L.speaking) listenPause(); unloadNatural(); }
       N.state = 'idle';
@@ -4654,9 +4691,10 @@
         try { localStorage.setItem('readfast:voice:onecore', '1'); } catch (e) {}
       }
       N.retriedOneCore = false;
-      // Loading includes a first sentence now, so a load that got this far
-      // proves memory suffices; the guard has done its job.
-      clearCrashGuard();
+      // v32: a one-word warm-up does not prove memory suffices — real phrases
+      // need more, and v31's iPhone crash came after this point. The guard
+      // stays up until a few real phrases have been made (onNaturalAudio).
+      N.madeN = 0; N.madeSecs = 0;
       try { localStorage.setItem('readfast:voice:ready', '1'); } catch (e) {}
       settleWaiters(null);
       renderVoicePanel();
@@ -5105,7 +5143,7 @@
         L.pad = 0.8 * L.pad + 0.2 * Math.max(0, Math.min(2, (raw - c.speech) * sp));
       }
       noteSpoken(c, c.dur);
-      if (!N.proven) clearCrashGuard();
+      noteMade(raw);
       schedule();
     }
     pumpNatural();
@@ -5125,6 +5163,13 @@
     L.rtf.push(ms / 1000 / dur);
     if (L.rtf.length > 8) L.rtf.shift();
     try { localStorage.setItem(rtfKey(), median(L.rtf).toFixed(3)); } catch (e) {}
+  }
+  // a real phrase made: after three of them, or 20 s of speech, memory is
+  // known to suffice and the crash guard comes down
+  function noteMade(secs) {
+    if (N.proven) return;
+    N.madeN = (N.madeN || 0) + 1; N.madeSecs = (N.madeSecs || 0) + (secs || 0);
+    if (N.madeN >= 3 || N.madeSecs >= 20) clearCrashGuard();
   }
   function clearCrashGuard() {
     N.proven = true;
@@ -5397,6 +5442,9 @@
     if (L.speaking || !R.book) return;
     if (!voicePrefs.engine) { openVoicePanel(); return; }
     if (voicePrefs.engine === 'natural' && (naturalUnavailableReason() || VOICE_CRASHED)) { openVoicePanel(); return; }
+    // not downloaded (or removed — v32's phones that had the full build): the
+    // panel says why and offers the download
+    if (voicePrefs.engine === 'natural' && !naturalWasReady() && N.state !== 'ready') { openVoicePanel(); return; }
     if (voicePrefs.engine === 'device' && !deviceVoices().length) { openVoicePanel(); return; }
     if (R.idx >= R.words.length) R.idx = 0;
     else if (R.rewindArmed) R.idx = resumePoint(R.idx);
@@ -5607,6 +5655,8 @@
     // the crash outranks "downloaded": the files being here is not the problem
     else if (VOICE_CRASHED && N.state !== 'ready') st = 'It stopped before it finished loading last time — the app was closed, or this device ran out of memory.';
     else if (N.state === 'ready' || naturalWasReady()) st = 'Downloaded — works offline';
+    // v32: the phone that had v31's full build, which it could not hold
+    else if (PHONE && lsGet('readfast:voice:toobig') === '1') st = 'The full-quality voice was too big for this phone\u2019s memory — that is what closed Read Fast. It has been removed, freeing 326 MB. The phone voice is a one-time download of about ' + VARIANTS.standard.mb + ' MB.';
     else st = 'One-time download of about ' + VARIANTS[wantedVariant()].mb + ' MB, then works offline.';
     el.engNaturalStatus.textContent = st;
     var busy = N.state === 'downloading';
@@ -5777,7 +5827,7 @@
   }
   function playPreviewAudio(m) {
     recordRtf(m.ms, m.raw || m.samples.length / m.rate);
-    clearCrashGuard();
+    noteMade(m.raw || m.samples.length / m.rate);
     PREVIEW.id = 0;
     if (!PREVIEW.playing || L.speaking) { renderVoiceActions(); return; }
     if (MEDIA) {
@@ -5812,7 +5862,7 @@
     N.state = 'idle'; N.pct = 0; N.error = '';
     try {
       ['readfast:voice:ready', 'readfast:voice:loading', 'readfast:voice:crashed', 'readfast:voice:onecore',
-       'readfast:voice:variant', 'readfast:voice:gpu', 'readfast:voice:fulloff'].forEach(function (k) { localStorage.removeItem(k); });
+       'readfast:voice:variant', 'readfast:voice:gpu', 'readfast:voice:fulloff', 'readfast:voice:toobig'].forEach(function (k) { localStorage.removeItem(k); });
       Object.keys(localStorage).forEach(function (k) { if (k.indexOf('readfast:voice:rtf') === 0) localStorage.removeItem(k); });
     } catch (e) {}
     L.rtf = []; VOICE_ONE_CORE = false;
