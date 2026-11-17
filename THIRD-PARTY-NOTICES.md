@@ -11,8 +11,8 @@ not.
 Nothing in Read Fast's own proprietary licence restricts your rights under the
 licences below, with respect to the components they cover.
 
-Last verified against the shipped build: **v30, 2 November 2026**
-(`index.html`, SHA-256 `5ee7186eac28fcfb15a6c33bb0ceba378821f407896ba8ab4ea468fa511f132a`)
+Last verified against the shipped build: **v31, 17 November 2026**
+(`index.html`, SHA-256 `ca3a7fec7ce3f01d742952bae7e1c8d41cdb519012aa8c0d516a0f024cd6f6f3`)
 
 ---
 
@@ -34,7 +34,7 @@ redistribute any of them.
 
 | Component | Version | Licence | How it arrives | Copyright / source |
 |---|---|---|---|---|
-| [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) — the speech model and voices, ONNX export | v1.0, q8 | Apache-2.0 | Downloaded at runtime from [huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX) | hexgrad; ONNX export by the onnx-community |
+| [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) — the speech model and voices, ONNX export | v1.0, q8 and fp32 | Apache-2.0 | Downloaded at runtime from [huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX) | hexgrad; ONNX export by the onnx-community |
 | [kokoro-js](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) | 1.2.1 | Apache-2.0 | Loaded at runtime from `cdn.jsdelivr.net` (`kokoro.web.js`, which also carries the next two) | hexgrad |
 | [Transformers.js](https://github.com/huggingface/transformers.js) (`@huggingface/transformers`) | 3.5.1 | Apache-2.0 | Inside `kokoro.web.js`; its WebAssembly runtime from `cdn.jsdelivr.net` | Hugging Face |
 | [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) | 1.21.0 | MIT | Inside Transformers.js, plus `ort-wasm-simd-threaded.jsep.wasm` | Microsoft Corporation |

@@ -62,7 +62,8 @@ a claim of ours — that is what makes it useful as evidence.
 | v16 | 4 Sep 2026 | *(see GitHub history)* | Licence, terms, notices, ownership record |
 | v17–v28 | 4 Sep – 2 Nov 2026 | *(rows not recorded at the time — GitHub's commit history holds each one)* | Touch, storage, pacing, statistics, Tier D, update card, safe areas, link previews, JohnsonX Labs |
 | v29 | 2 Nov 2026 | `7d49da0` | **Listen**: the book read aloud by an on-device voice. `index.html` SHA-256 `91029f0aff60fe4c57faeb55bf47407b5a4cfd66713d4edd8e0df3ac8e3ffe86` · `sw.js` `bcdc7dd7c3250f5357c3ae6c84dad274c6a7878780a74f09e31f8fb7f0e04555` |
-| v30 | 2 Nov 2026 | *(the commit that adds this row)* | **The voice reads straight through**: several cores via cross-origin isolation, gapless Web Audio playback, trimmed padding, phrases sized to stay ahead, speech made in advance, chapter-aware phrasing. `index.html` SHA-256 `5ee7186eac28fcfb15a6c33bb0ceba378821f407896ba8ab4ea468fa511f132a` · `sw.js` `62a5e37d8d1d135ac1088c9de709d79e01b2997e0767941a4f5a933f826f5f80` |
+| v30 | 2 Nov 2026 | `3932915` | **The voice reads straight through**: several cores via cross-origin isolation, gapless Web Audio playback, trimmed padding, phrases sized to stay ahead, speech made in advance, chapter-aware phrasing. `index.html` SHA-256 `5ee7186eac28fcfb15a6c33bb0ceba378821f407896ba8ab4ea468fa511f132a` · `sw.js` `62a5e37d8d1d135ac1088c9de709d79e01b2997e0767941a4f5a933f826f5f80` |
+| v31 | 17 Nov 2026 | *(the commit that adds this row)* | iPhone reader no longer zooms in; page view with a page slider; resumable voice download; lock-screen playback on iPhone and iPad; the full-precision voice on the graphics chip. `index.html` SHA-256 `ca3a7fec7ce3f01d742952bae7e1c8d41cdb519012aa8c0d516a0f024cd6f6f3` · `sw.js` `626da062ac014fb135c5a5a3d20206712302761b25e991f2b79b138b6f38219f` |
 
 ---
 
