@@ -61,7 +61,7 @@
 </style>
 </head>
 <body>
-<script>window.BUILD={v:'v33',date:'17 November 2026'};</script>
+<script>window.BUILD={v:'v34',date:'18 November 2026'};</script>
 
 
 <style>
@@ -1786,6 +1786,7 @@
      release, in plain words, newest first. Trim the tail past a dozen — nobody
      reads further back than that. */
   var WHATS_NEW = [
+    ['v34', 'A correction to v33: iPhone and iPad do not let websites use the Premium voices you download in Settings, or Siri\u2019s voices \u2014 Apple keeps those for the system \u2014 so Read Fast no longer suggests it. Starting the natural voice now has a time limit at every step, including checking the files already on this device, and when it takes long the voice panel lists the steps so far, so if it stops, a screenshot shows exactly where.'],
     ['v33', 'The natural voice no longer sits on \u201cStarting\u2026\u201d. The voice engine now comes down with the voice, with progress, and carries on if the download is interrupted; the voice panel shows each step as it starts; the screen stays on while it does; and if it gets stuck on several processor cores it tries again on one by itself, or says plainly where it stopped. Leaving Read Fast just after the voice starts is no longer mistaken for a crash. On iPhone, where the natural voice is made slower than it speaks, the panel says so and shows how to get Apple\u2019s much clearer Premium voices for the device voice.'],
     ['v32', 'Fixes Read Fast closing on iPhone after the voice download. v31 gave phones the large full-quality voice, which needs more memory than iOS allows one page. Phones and tablets now always use the phone-sized voice: if your phone has the large one, it is removed (freeing 326 MB) and the voice panel offers the phone voice to download. Computers keep the full-quality voice.'],
     ['v31', 'On phones, tapping the page number opens the page view, with a slider across the whole book, and the reader no longer zooms in. The natural voice download now survives the screen locking and carries on where it stopped. On iPhone and iPad the voice keeps reading with the screen off, with controls on the lock screen. Where the graphics chip can run it, a clearer full-quality voice runs nine times faster than speech — no more pauses.'],
@@ -4444,7 +4445,9 @@
     if (!window.caches) return;
     var need = [], files = engineFiles(voice);
     for (var i = 0; i < files.length; i++) {
-      var hit = await caches.open(files[i].cache).then(function (c) { return c.match(files[i].url); }).catch(function () { return null; });
+      var hit;
+      try { hit = await withTimeout(caches.open(files[i].cache).then(function (c) { return c.match(files[i].url); }), STORAGE_MS); }
+      catch (e) { throw new Error(storageMessage()); }
       if (!hit) need.push(files[i]);
     }
     if (!need.length) return;
@@ -4456,6 +4459,7 @@
       for (var tries = 0; ; tries++) {
         await whenVisibleOnline(function (w) { N.netWait = w; renderVoiceStatus(); });
         if (N.state !== 'loading') throw new Error('stopped');
+        armStall(LOAD_STALL_MS);           // each attempt gets its own time
         var ctl = window.AbortController ? new AbortController() : null, last = Date.now(), got = 0;
         var dog = setInterval(function () { if (!document.hidden && Date.now() - last > 30000 && ctl) ctl.abort(); }, 2000);
         try {
@@ -4467,7 +4471,7 @@
           for (;;) {
             var r = await reader.read();
             if (r.done) break;
-            got += r.value.length; last = Date.now();
+            got += r.value.length; last = Date.now(); armStall(LOAD_STALL_MS);
             N.pct = Math.min(99, Math.floor(100 * (done + got) / total)); renderVoiceStatus();
           }
           await put;
@@ -4495,11 +4499,16 @@
     var p = new Promise(function (res, rej) { N.waiters.push([res, rej]); });
     if (N.state === 'loading' || N.state === 'downloading') return p;
     N.state = 'loading'; N.pct = 0; N.error = '';
-    N.loadAt = Date.now(); N.stages = []; N.stage = 'start'; N.netWait = false; N.retriedOneCore = false;
+    N.loadAt = Date.now(); N.stages = []; N.stage = ''; N.netWait = false; N.retriedOneCore = false; N.worker = null;
     holdScreenAwake();               // v33: a phone must not lock half way through
+    // v34: the clock runs from here, not from when the engine starts — v33's
+    // checks of the files on the device had no limit, and a check that never
+    // answered left the panel counting up under "Starting" for good
+    setStage('check');
+    armStall(LOAD_START_MS);
     var v = installedVariant() || wantedVariant();
     var go = function () {
-      hasModel(v).then(function (here) {
+      withTimeout(hasModel(v), STORAGE_MS).then(function (here) {
         if (N.state !== 'loading') return;
         if (!here && window.caches) {
           // the browser cleared it (storage pressure) — loading now would start
@@ -4519,6 +4528,8 @@
           naturalFail(err && err.message ? err.message : 'Getting the voice engine failed. Try again.');
         });
         renderVoicePanel();
+      }, function () {
+        if (N.state === 'loading') naturalFail(storageMessage());
       });
     };
     if (GPU.ok === null) probeGpu().then(go); else go();
@@ -4571,13 +4582,25 @@
     clearTimeout(N.stallTimer);
     N.stallTimer = setTimeout(function () {
       if (N.state !== 'loading') return;
-      if (document.hidden) { armStall(ms); return; }
+      if (document.hidden || N.netWait) { armStall(ms); return; }
       // v33: stuck on several cores tries one core first (loadFailed); stuck
-      // on one says where it stopped, so a screenshot tells us
+      // on one says where it stopped, so a screenshot tells us. Before the
+      // engine has started there is nothing to retry: say where it stopped.
+      if (!N.worker) { naturalFail(stuckMessage()); return; }
       loadFailed(stuckMessage());
     }, ms);
   }
-  var STAGE_NAMES = { fetch: 'getting the voice engine', start: 'starting the voice engine', model: 'loading the voice',
+  var STORAGE_MS = 10000;       // the browser's storage has this long to answer one question
+  function withTimeout(promise, ms) {
+    return new Promise(function (res, rej) {
+      var t = setTimeout(function () { rej(new Error('timeout')); }, ms);
+      promise.then(function (v) { clearTimeout(t); res(v); }, function (e) { clearTimeout(t); rej(e); });
+    });
+  }
+  function storageMessage() {
+    return 'This device\u2019s storage did not answer while Read Fast checked the voice files. Close Read Fast completely and open it again; if it happens again, use \u201cRemove the downloaded voice\u201d below and download it again. (' + (N.stages || []).join(' \u00b7 ') + ')';
+  }
+  var STAGE_NAMES = { check: 'checking the voice on this device', fetch: 'getting the voice engine', start: 'starting the voice engine', model: 'loading the voice',
                       prepare: 'preparing the voice', warm: 'warming up' };
   function setStage(st) {
     N.stage = st; N.stageAt = Date.now();
@@ -4597,9 +4620,12 @@
     else if (N.stage === 'model') t = 'Loading the voice…' + (N.pct ? ' ' + N.pct + '%' : '');
     else if (N.stage === 'prepare') t = 'Preparing the voice…';
     else if (N.stage === 'warm') t = 'Warming up…';
+    else if (N.stage === 'check') t = 'Checking the voice on this device…';
     else t = 'Starting the voice engine…';
     if (N.stage !== 'fetch' && secs >= 3) t += ' ' + secs + ' s';
     if (N.retriedOneCore) t += ' · trying again on one core';
+    // v34: taking long — list the steps so far, so a screenshot says where
+    if (secs >= 15 && N.stages && N.stages.length) t += ' (steps: ' + N.stages.join(' \u203a ') + ')';
     return t;
   }
   // ---- the download (v31)
@@ -5858,14 +5884,15 @@
         ? ' It runs faster the next time you open Read Fast.' : '';
       if (rtf && rtf < 0.95) note = 'On this device the natural voice prepares speech ' + (1 / rtf).toFixed(1) + '× faster than it speaks' + how + ', so it plays without gaps.';
       else if (rtf) note = 'This device prepares the natural voice ' + (rtf < 1.15 ? 'about as fast as' : 'slower than') + ' it speaks' + how + ', so expect short pauses between some sentences.' + later +
-        (MEDIA ? ' The device voice reads without pauses — and with one of Apple\u2019s Premium voices it is far clearer (see Device voice).' : '');
+        (MEDIA ? ' The device voice reads without pauses.' : '');
       else note = 'The voice is made on this device, so your book never leaves it. The model downloads once from Hugging Face and the engine from jsDelivr; nothing else is sent.';
     } else if (!natural && !why) {
       note = 'Uses only voices that run on this device, so the text being read stays here. Keep Read Fast open while it reads.';
-      // v33: Apple's Premium voices are far clearer than the standard ones,
-      // and a web page can use them once they are downloaded
-      if (MEDIA && !deviceVoices().some(function (v) { return /premium|enhanced/i.test(v.name); }))
-        note = 'For a much clearer voice, download one of Apple\u2019s Premium voices: Settings \u203a Accessibility \u203a Read & Speak \u203a Voices \u203a English (Ava is a good one). Read Fast lists it the next time it opens. ' + note;
+      // v34: v33 said a Premium voice downloaded in Settings would appear
+      // here. It does not: WebKit gives web pages only the built-in voices
+      // (WebKit bug 290497), on every iPhone and iPad browser; Siri's voices
+      // are kept from all apps. Say so, so nobody downloads one for nothing.
+      if (MEDIA) note += ' On iPhone and iPad, Apple lets websites use only the built-in voices \u2014 the Premium and Siri voices in Settings stay with the system.';
     }
     el.voiceNote.textContent = note;
     // the 8-bit build is here, and this device can run the full one well
@@ -5997,11 +6024,15 @@
     } catch (e) {}
     L.rtf = []; VOICE_ONE_CORE = false;
     var gone = window.caches ? Promise.all(VOICE_CACHES.map(function (n) { return caches.delete(n).catch(function () {}); })) : Promise.resolve();
-    gone.then(function () {
-      if (voicePrefs.engine === 'natural') { voicePrefs.engine = ''; saveVoicePrefs(); }
-      renderVoicePanel();
+    // v34: the settings are already cleared; storage that does not answer
+    // must not leave the panel waiting — it finishes freeing the space later
+    if (voicePrefs.engine === 'natural') { voicePrefs.engine = ''; saveVoicePrefs(); }
+    renderVoicePanel();
+    withTimeout(gone, STORAGE_MS).then(function () {
       toast('').done('Removed the natural voice from this device.');
       refreshStorageNote();
+    }, function () {
+      toast('').done('Removed the natural voice. Your device will finish freeing the space in the background.');
     });
   }
   function refreshStorageNote() {
