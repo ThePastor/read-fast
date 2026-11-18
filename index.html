@@ -61,7 +61,7 @@
 </style>
 </head>
 <body>
-<script>window.BUILD={v:'v34',date:'18 November 2026'};</script>
+<script>window.BUILD={v:'v35',date:'18 November 2026'};</script>
 
 
 <style>
@@ -1786,6 +1786,7 @@
      release, in plain words, newest first. Trim the tail past a dozen — nobody
      reads further back than that. */
   var WHATS_NEW = [
+    ['v35', 'A natural voice that works on iPhone and iPad. Phones and tablets now get a voice made for them \u2014 Supertonic \u2014 that starts in seconds and makes speech several times faster than it speaks, even on one processor core, so it reads without stopping. The old phone voice could not keep up on iPhone, which is why it sat on \u201cStarting\u201d; it is removed to free its space, and the new one is a one-time download. Ten voices to choose from, and it works offline. Computers keep the voice they have.'],
     ['v34', 'A correction to v33: iPhone and iPad do not let websites use the Premium voices you download in Settings, or Siri\u2019s voices \u2014 Apple keeps those for the system \u2014 so Read Fast no longer suggests it. Starting the natural voice now has a time limit at every step, including checking the files already on this device, and when it takes long the voice panel lists the steps so far, so if it stops, a screenshot shows exactly where.'],
     ['v33', 'The natural voice no longer sits on \u201cStarting\u2026\u201d. The voice engine now comes down with the voice, with progress, and carries on if the download is interrupted; the voice panel shows each step as it starts; the screen stays on while it does; and if it gets stuck on several processor cores it tries again on one by itself, or says plainly where it stopped. Leaving Read Fast just after the voice starts is no longer mistaken for a crash. On iPhone, where the natural voice is made slower than it speaks, the panel says so and shows how to get Apple\u2019s much clearer Premium voices for the device voice.'],
     ['v32', 'Fixes Read Fast closing on iPhone after the voice download. v31 gave phones the large full-quality voice, which needs more memory than iOS allows one page. Phones and tablets now always use the phone-sized voice: if your phone has the large one, it is removed (freeing 326 MB) and the voice panel offers the phone voice to download. Computers keep the full-quality voice.'],
@@ -4150,6 +4151,20 @@
   var KOKORO_URL = 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js';
   var KOKORO_MODEL = 'onnx-community/Kokoro-82M-v1.0-ONNX';
   var KOKORO_FILES = 'https://huggingface.co/' + KOKORO_MODEL + '/resolve/main/';
+  // v35: the phone voice. Supertonic 2 (Supertone Inc., OpenRAIL-M licence),
+  // 66 million parameters, built for on-device speech, run by Transformers.js
+  // 3.8.1 — which uses the very same WebAssembly runtime as Kokoro's engine,
+  // so that 21.6 MB is shared, not fetched twice. Measured in WebKit 26.6 (the
+  // iPhone's engine) on Anndy's Mac, seconds of work per second of speech:
+  //                         one core   four cores
+  //   Kokoro, 8-bit           2.29        1.15     (could not start on his iPhone:
+  //                                                  still on its first sentence
+  //                                                  after 40 s, on one core)
+  //   Supertonic 2            0.31        0.11
+  // Page memory settles near 1.2 GB (Kokoro 8-bit: 1.1 GB, which his iPhone held).
+  var ST_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/transformers.min.js';
+  var ST_MODEL = 'onnx-community/Supertonic-TTS-2-ONNX';
+  var ST_FILES = 'https://huggingface.co/' + ST_MODEL + '/resolve/main/';
   // v31: two builds of the same model. Measured on Anndy's Mac, 17 Nov 2026
   // (seconds of work per second of audio; lower is faster; 1 = just keeps up):
   //   8-bit (v29/v30), processor:        1.05 on a busy Mac (0.77 idle)
@@ -4162,8 +4177,13 @@
   // silent (q4f16). Its cost is size, so a phone without a graphics-chip path
   // keeps the 8-bit build.
   var VARIANTS = {
-    standard: { dtype: 'q8', file: 'onnx/model_quantized.onnx', model: 92, mb: 117 },    // + runtime 22, engine 2, voice 0.5
-    full:     { dtype: 'fp32', file: 'onnx/model.onnx', model: 326, mb: 350 }
+    standard: { dtype: 'q8', file: 'onnx/model_quantized.onnx', size: 92361116, model: 92, mb: 117 },    // + runtime 22, engine 2, voice 0.5
+    full:     { dtype: 'fp32', file: 'onnx/model.onnx', size: 325532232, model: 326, mb: 350 },
+    // v35: phones and tablets — three models, each a small graph and its weights
+    phone:    { engine: 'supertonic', dtype: 'fp32', model: 263, mb: 286,   // + runtime 22, engine 1, voices 0.5
+                files: [['onnx/text_encoder.onnx', 433173], ['onnx/text_encoder.onnx_data', 28530432],
+                        ['onnx/latent_denoiser.onnx', 397050], ['onnx/latent_denoiser.onnx_data', 132098880],
+                        ['onnx/voice_decoder.onnx', 59730], ['onnx/voice_decoder.onnx_data', 101353472]] }
   };
   var NATURAL_MB = VARIANTS.standard.mb;
   var PARTS_CACHE = 'readfast-voice-parts', PART_BYTES = 8 * 1024 * 1024;
@@ -4177,7 +4197,15 @@
     { id: 'am_fenrir', name: 'Fenrir', note: 'American · male' },
     { id: 'bm_george', name: 'George', note: 'British · male' }
   ];
-  var VOICE_CACHES = ['transformers-cache', 'kokoro-voices', 'readfast-voice-engine-1', PARTS_CACHE];
+  // v35: the phone voice's ten voices, as Supertone names them
+  var PHONE_VOICES = [
+    { id: 'F1', name: 'Female 1', note: 'female' }, { id: 'F2', name: 'Female 2', note: 'female' },
+    { id: 'F3', name: 'Female 3', note: 'female' }, { id: 'F4', name: 'Female 4', note: 'female' },
+    { id: 'F5', name: 'Female 5', note: 'female' }, { id: 'M1', name: 'Male 1', note: 'male' },
+    { id: 'M2', name: 'Male 2', note: 'male' }, { id: 'M3', name: 'Male 3', note: 'male' },
+    { id: 'M4', name: 'Male 4', note: 'male' }, { id: 'M5', name: 'Male 5', note: 'male' }
+  ];
+  var VOICE_CACHES = ['transformers-cache', 'kokoro-voices', 'readfast-voice-engine-1', 'readfast-phone-voices', PARTS_CACHE];
   // Deadlines, because an engine that hangs leaves a reader staring at a play
   // button that does nothing — the v21 rule: nothing that can hang is awaited
   // without one.
@@ -4200,7 +4228,7 @@
   var NAT_AHEAD_MAX = 14;        // …or this many phrases
   var NAT_MAX_ERRORS = 3;        // phrases in a row the engine may fail on before giving up
 
-  var voicePrefs = { engine: '', natural: 'af_heart', device: '', speed: 1 };
+  var voicePrefs = { engine: '', natural: 'af_heart', phone: 'F1', device: '', speed: 1 };
   (function () {
     try {
       var saved = JSON.parse(localStorage.getItem('readfast:voice') || 'null');
@@ -4284,27 +4312,60 @@
       VOICE_CRASHED = false;
     }
     lsSet('readfast:voice:rtf:full:gpu', null); lsSet('readfast:voice:rtf:full:mt', null); lsSet('readfast:voice:rtf:full:st', null);
+    // v35: a phone with Kokoro's 8-bit build (v32-v34) gets the phone voice
+    // instead: that build could not keep up on iPhone. Its settings go at once
+    // — the one-core note and the crash flag too, which belonged to it — and
+    // its 92 MB file after; the panel explains and offers the new download.
+    var v0 = lsGet('readfast:voice:variant');
+    if (v0 !== 'phone' && (v0 || lsGet('readfast:voice:ready') === '1')) {
+      ['readfast:voice:variant', 'readfast:voice:ready', 'readfast:voice:loading', 'readfast:voice:crashed', 'readfast:voice:onecore',
+       'readfast:voice:gpu', 'readfast:voice:fulloff', 'readfast:voice:rtf:standard:mt', 'readfast:voice:rtf:standard:st'].forEach(function (k) { lsSet(k, null); });
+      if (!hadFull) lsSet('readfast:voice:newphone', '1');
+      VOICE_CRASHED = false; VOICE_ONE_CORE = false;
+    }
     if (!window.caches) return;
-    var full = KOKORO_FILES + VARIANTS.full.file;
+    var full = KOKORO_FILES + VARIANTS.full.file, q8 = KOKORO_FILES + VARIANTS.standard.file;
+    caches.open('transformers-cache').then(function (c) { return c.delete(q8); }).catch(function () {});
     caches.open('transformers-cache').then(function (c) {
       return c.delete(full).then(function (gone) { if (gone && !hadFull) lsSet('readfast:voice:toobig', '1'); });
     }).catch(function () {});
     caches.has(PARTS_CACHE).then(function (has) {
       if (!has) return;
       return caches.open(PARTS_CACHE).then(function (c) {
-        return c.keys().then(function (ks) { return Promise.all(ks.filter(function (r) { return r.url.indexOf(full) === 0; }).map(function (r) { return c.delete(r); })); });
+        return c.keys().then(function (ks) { return Promise.all(ks.filter(function (r) { return r.url.indexOf(full) === 0 || r.url.indexOf(q8) === 0; }).map(function (r) { return c.delete(r); })); });
       });
     }).catch(function () {});
   })();
   // The build this device has, and the one it should have.
   function installedVariant() {
     var v = lsGet('readfast:voice:variant');
-    if (PHONE && v === 'full') return '';
+    if (PHONE) return v === 'phone' ? 'phone' : '';        // v35: phones run the phone voice only
+    if (v === 'phone') return '';
     return VARIANTS[v] ? v : (naturalWasReady() ? 'standard' : '');
   }
   function wantedVariant() {
-    if (PHONE || lsGet('readfast:voice:fulloff') === '1') return 'standard';
+    if (PHONE) return 'phone';
+    if (lsGet('readfast:voice:fulloff') === '1') return 'standard';
     return 'full';
+  }
+  // v35: which engine a build runs on, and the voices and voice of the one in use
+  function engineOf(v) { return (VARIANTS[v] && VARIANTS[v].engine) || 'kokoro'; }
+  function natEngine() { return engineOf(installedVariant() || wantedVariant()); }
+  function natVoices() { return natEngine() === 'supertonic' ? PHONE_VOICES : NATURAL_VOICES; }
+  function natVoice() {
+    if (natEngine() !== 'supertonic') return voicePrefs.natural;
+    for (var i = 0; i < PHONE_VOICES.length; i++) if (PHONE_VOICES[i].id === voicePrefs.phone) return voicePrefs.phone;
+    return 'F1';
+  }
+  // v35: the phone voice refines its sound in steps; five is its makers'
+  // default. A device that turns out slow is given fewer, rather than pauses.
+  function natSteps() { var st = parseInt(lsGet('readfast:voice:steps'), 10); return st === 2 || st === 3 ? st : 5; }
+  function adaptSteps() {
+    if (natEngine() !== 'supertonic' || L.rtf.length < 3) return;
+    var r = median(L.rtf.slice(-4)), st = natSteps(), to = st;
+    if (r > 0.8 && st > 2) to = st === 5 ? 3 : 2;
+    else if (r < 0.3 && st < 5) to = st === 2 ? 3 : 5;
+    if (to !== st) { lsSet('readfast:voice:steps', to === 5 ? null : String(to)); L.rtf = []; }
   }
   // the chip a load of build v will use
   function deviceFor(v) { return v === 'full' && gpuAllowed() && !PHONE ? 'webgpu' : 'wasm'; }
@@ -4373,26 +4434,50 @@
   // nearly a second of dead air. The pause between sentences is put back on
   // this side, sized to the punctuation.
   var VOICE_WORKER_SRC = [
-    "let tts = null;",
+    "let tts = null, gen = null, engine = 'kokoro';",
+    "const styles = {};",
+    // v35: the phone voice's voices are small files kept in a cache of our own
+    // (the engine does not cache them), so changing voice works offline
+    "const styleOf = async (base, voice) => {",
+    "  if (styles[voice]) return styles[voice];",
+    "  const url = base + 'voices/' + voice + '.bin';",
+    "  let r = null;",
+    "  try { const c = await caches.open('readfast-phone-voices'); r = await c.match(url); if (!r) { r = await fetch(url); if (r.ok) await c.put(url, r.clone()); } } catch (err) { r = await fetch(url); }",
+    "  return (styles[voice] = new Float32Array(await r.arrayBuffer()));",
+    "};",
     "self.onmessage = async (e) => {",
     "  const m = e.data;",
     "  if (m.type === 'load') {",
     "    try {",
-    "      if (m.single) { try { Object.defineProperty(self, 'crossOriginIsolated', { value: false, configurable: true }); } catch (err) {} }",
-    "      const { KokoroTTS } = await import(m.url);",
-    "      postMessage({ type: 'progress', file: 'engine' });",
-    "      tts = await KokoroTTS.from_pretrained(m.model, { dtype: m.dtype, device: m.device,",
-    "        progress_callback: (p) => { if (p && p.status === 'progress') postMessage({ type: 'progress', file: String(p.file || ''), loaded: p.loaded || 0, total: p.total || 0 }); } });",
+    "      const progress = (p) => { if (p && p.status === 'progress') postMessage({ type: 'progress', file: String(p.file || ''), loaded: p.loaded || 0, total: p.total || 0 }); };",
+    "      engine = m.engine || 'kokoro';",
+    "      if (engine === 'supertonic') {",
+    "        const T = await import(m.url);",
+    "        T.env.backends.onnx.wasm.wasmPaths = m.ortBase;",
+    "        if (m.single) T.env.backends.onnx.wasm.numThreads = 1;",
+    "        postMessage({ type: 'progress', file: 'engine' });",
+    "        tts = await T.pipeline('text-to-speech', m.model, { dtype: 'fp32', device: 'wasm', progress_callback: progress });",
+    "        gen = async (text, voice, speed, steps) => {",
+    "          const a = await tts('<en>' + text + '</en>', { speaker_embeddings: await styleOf(m.files, voice || 'F1'), num_inference_steps: steps || 5, speed: speed || 1 });",
+    "          return { audio: a.audio, sampling_rate: a.sampling_rate };",
+    "        };",
+    "      } else {",
+    "        if (m.single) { try { Object.defineProperty(self, 'crossOriginIsolated', { value: false, configurable: true }); } catch (err) {} }",
+    "        const { KokoroTTS } = await import(m.url);",
+    "        postMessage({ type: 'progress', file: 'engine' });",
+    "        tts = await KokoroTTS.from_pretrained(m.model, { dtype: m.dtype, device: m.device, progress_callback: progress });",
+    "        gen = (text, voice, speed) => tts.generate(text, { voice, speed });",
+    "      }",
     "      postMessage({ type: 'progress', file: 'warm' });",
     "      const t0 = performance.now();",
-    "      await tts.generate(m.warm || 'Ready.', { voice: m.voice || 'af_heart', speed: 1 });",
+    "      await gen(m.warm || 'Ready.', m.voice, 1, m.steps);",
     "      const iso = !!self.crossOriginIsolated && typeof SharedArrayBuffer === 'function';",
-    "      postMessage({ type: 'ready', gpu: m.device === 'webgpu', threads: iso ? Math.min(4, Math.ceil((navigator.hardwareConcurrency || 1) / 2)) : 1, warmMs: performance.now() - t0 });",
+    "      postMessage({ type: 'ready', gpu: m.device === 'webgpu', threads: iso && !m.single ? Math.min(4, Math.ceil((navigator.hardwareConcurrency || 1) / 2)) : 1, warmMs: performance.now() - t0 });",
     "    } catch (err) { postMessage({ type: 'error', stage: 'load', message: String((err && err.message) || err) }); }",
     "  } else if (m.type === 'gen') {",
     "    try {",
     "      const t0 = performance.now();",
-    "      const a = await tts.generate(m.text, { voice: m.voice, speed: m.speed });",
+    "      const a = await gen(m.text, m.voice, m.speed, m.steps);",
     "      const A = a.audio, rate = a.sampling_rate, T = 0.004;",
     "      let f = 0, l = A.length - 1;",
     "      while (f < A.length && Math.abs(A[f]) < T) f++;",
@@ -4405,6 +4490,10 @@
     "      const samples = A.slice(s0, s1);",
     "      const fz = Math.min(samples.length >> 1, Math.round(rate * 0.006));",
     "      for (let i = 0; i < fz; i++) { const g = i / fz; samples[i] *= g; samples[samples.length - 1 - i] *= g; }",
+    // v35: the phone voice comes out about 4 dB quieter than Kokoro: brought
+    // up to a peak of -1 dB, never more than doubled
+    "      if (engine === 'supertonic') { let pk = 0; for (let i = 0; i < samples.length; i++) { const v = Math.abs(samples[i]); if (v > pk) pk = v; }",
+    "        const g = pk > 0 ? Math.min(2, 0.89 / pk) : 1; if (g > 1.01) for (let i = 0; i < samples.length; i++) samples[i] *= g; }",
     "      postMessage({ type: 'audio', id: m.id, samples, rate, raw: A.length / rate, ms: performance.now() - t0 }, [samples.buffer]);",
     "    } catch (err) { postMessage({ type: 'error', stage: 'gen', id: m.id, message: String((err && err.message) || err) }); }",
     "  }",
@@ -4418,7 +4507,15 @@
   // "Starting…": 24 MB with no progress, nothing to resume, and on a phone a
   // screen that could lock half way.
   var ORT_BASE = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1/dist/';
-  function engineFiles(voice) {
+  function engineFiles(v, voice) {
+    if (engineOf(v) === 'supertonic') return [
+      { url: ST_URL, cache: 'readfast-voice-engine-1', size: 888173 },
+      { url: ORT_BASE + 'ort-wasm-simd-threaded.jsep.mjs', cache: 'readfast-voice-engine-1', size: 44484 },
+      { url: ORT_BASE + 'ort-wasm-simd-threaded.jsep.wasm', cache: 'readfast-voice-engine-1', size: 21596019 },
+      { url: ST_FILES + 'config.json', cache: 'transformers-cache', size: 247 },
+      { url: ST_FILES + 'tokenizer.json', cache: 'transformers-cache', size: 5658 },
+      { url: ST_FILES + 'tokenizer_config.json', cache: 'transformers-cache', size: 119 }
+    ].concat(PHONE_VOICES.map(function (pv) { return { url: ST_FILES + 'voices/' + pv.id + '.bin', cache: 'readfast-phone-voices', size: 51712 }; }));
     return [
       { url: KOKORO_URL, cache: 'readfast-voice-engine-1', size: 2135146 },
       { url: ORT_BASE + 'ort-wasm-simd-threaded.jsep.mjs', cache: 'readfast-voice-engine-1', size: 44484 },
@@ -4441,9 +4538,9 @@
       document.addEventListener('visibilitychange', check); window.addEventListener('online', check);
     });
   }
-  async function ensureEngine(voice) {
+  async function ensureEngine(v, voice) {
     if (!window.caches) return;
-    var need = [], files = engineFiles(voice);
+    var need = [], files = engineFiles(v, voice);
     for (var i = 0; i < files.length; i++) {
       var hit;
       try { hit = await withTimeout(caches.open(files[i].cache).then(function (c) { return c.match(files[i].url); }), STORAGE_MS); }
@@ -4519,7 +4616,7 @@
           renderVoicePanel();
           return;
         }
-        ensureEngine(voicePrefs.natural).then(function () {
+        ensureEngine(v, natVoice()).then(function () {
           if (N.state !== 'loading') return;
           startWorker(v, deviceFor(v), !manyCores());
           renderVoicePanel();
@@ -4554,8 +4651,10 @@
       N.worker.onerror = function (e) {
         loadFailed('The voice engine failed to start' + (e && e.message ? ' (' + e.message + ').' : '.'));
       };
-      N.worker.postMessage({ type: 'load', url: KOKORO_URL, model: KOKORO_MODEL, dtype: VARIANTS[variant].dtype, device: device,
-                             single: N.single, voice: voicePrefs.natural, warm: WARM_TEXT });
+      var st = engineOf(variant) === 'supertonic';
+      N.worker.postMessage({ type: 'load', engine: engineOf(variant), url: st ? ST_URL : KOKORO_URL, model: st ? ST_MODEL : KOKORO_MODEL,
+                             files: ST_FILES, ortBase: ORT_BASE, dtype: VARIANTS[variant].dtype, device: device,
+                             single: N.single, voice: natVoice(), steps: natSteps(), warm: WARM_TEXT });
       armStall(LOAD_START_MS);
     } catch (e) {
       naturalFail('The voice engine could not start in this browser.');
@@ -4639,10 +4738,16 @@
   var DL = { active: false, done: 0, total: 0, variant: '', waiting: false, upgrade: false, cancel: false, ctl: null, wake: null };
   function dlCancelled() { if (DL.cancel) throw new Error('cancelled'); }
   function modelUrl(v) { return KOKORO_FILES + VARIANTS[v].file; }
+  // v35: the files of build v — Kokoro's one, or the phone voice's six
+  function modelFiles(v) {
+    var V = VARIANTS[v];
+    return V.files ? V.files.map(function (f) { return { url: ST_FILES + f[0], size: f[1] }; }) : [{ url: modelUrl(v), size: V.size }];
+  }
   function hasModel(v) {
     if (!window.caches) return Promise.resolve(false);
-    return caches.open('transformers-cache').then(function (c) { return c.match(modelUrl(v)); })
-      .then(function (r) { return !!r; }, function () { return false; });
+    return caches.open('transformers-cache').then(function (c) {
+      return Promise.all(modelFiles(v).map(function (f) { return c.match(f.url); }));
+    }).then(function (rs) { return rs.every(Boolean); }, function () { return false; });
   }
   function sleepMs(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
   // resolves when the page is on screen and online — a hidden page on a phone
@@ -4672,6 +4777,12 @@
       try {
         var res = await fetch(state.src, { headers: { Range: 'bytes=' + a + '-' + b }, signal: ctl ? ctl.signal : undefined });
         if (res.status === 403 || res.status === 410) { state.src = state.url; throw new Error('expired'); }   // the signed file link ran out
+        // v35: a whole file after a redirect is WebKit having dropped the range
+        // on the way (a page under a service worker): ask the file server itself
+        if (res.status === 200 && res.redirected && res.url && res.url !== state.src) {
+          try { if (ctl) ctl.abort(); } catch (e) {}
+          clearInterval(dog); state.src = res.url; tries--; continue;
+        }
         if (res.status === 200 && a === 0) { clearInterval(dog); return { whole: res }; }     // no ranges here
         if (res.status !== 206) throw new Error('HTTP ' + res.status);
         var cr = /\/(\d+)\s*$/.exec(res.headers.get('content-range') || '');
@@ -4696,8 +4807,19 @@
       }
     }
   }
+  // v35: every file of the build, each in pieces as before, one progress bar
   async function downloadModel(v) {
-    var url = modelUrl(v), parts = await caches.open(PARTS_CACHE);
+    var files = modelFiles(v), tc = await caches.open('transformers-cache'), base = 0, need = [];
+    DL.total = files.reduce(function (t, f) { return t + f.size; }, 0);
+    for (var i = 0; i < files.length; i++) {
+      if (await withTimeout(tc.match(files[i].url), STORAGE_MS).catch(function () { return null; })) base += files[i].size; else need.push(files[i]);
+    }
+    DL.done = base; renderVoiceStatus();
+    for (var k = 0; k < need.length; k++) { await downloadFile(need[k].url, base, DL.total); base += need[k].size; DL.done = base; }
+    await caches.delete(PARTS_CACHE);
+  }
+  async function downloadFile(url, base, totalAll) {
+    var parts = await caches.open(PARTS_CACHE);
     var metaRes = await parts.match(url + '?rfmeta'), meta = metaRes ? await metaRes.json().catch(function () { return null; }) : null;
     var state = { url: url, src: url, total: meta && meta.total || 0 };
     var key = function (i) { return url + '?rfpart=' + i; };
@@ -4705,27 +4827,27 @@
     var size = function (i) { return Math.min(PART_BYTES, state.total - i * PART_BYTES); };
     if (!state.total) {
       // the first piece tells us the file's size
-      var first = await fetchPiece(state, 0, PART_BYTES - 1, function (n) { DL.done = n; renderVoiceStatus(); });
-      if (first.whole) return downloadWhole(v, first.whole);
+      var first = await fetchPiece(state, 0, PART_BYTES - 1, function (n) { DL.done = base + n; renderVoiceStatus(); });
+      if (first.whole) return downloadWhole(url, first.whole, base, totalAll);
       await parts.put(url + '?rfmeta', new Response(JSON.stringify({ total: state.total })));
       await parts.put(key(0), new Response(first.blob));
     }
-    DL.total = state.total;
+    DL.total = totalAll || state.total;
     var done = 0, have = [];
     for (var i = 0; i < count(); i++) {
       var r = await parts.match(key(i));
       var n = r ? (await r.clone().blob()).size : 0;
       if (n === size(i)) { have[i] = true; done += n; }
     }
-    DL.done = done; renderVoiceStatus();
+    DL.done = base + done; renderVoiceStatus();
     for (i = 0; i < count(); i++) {
       if (have[i]) continue;
-      var a = i * PART_BYTES, got = await fetchPiece(state, a, a + size(i) - 1, function (n) { DL.done = done + n; renderVoiceStatus(); });
+      var a = i * PART_BYTES, got = await fetchPiece(state, a, a + size(i) - 1, function (n) { DL.done = base + done + n; renderVoiceStatus(); });
       if (got.whole) throw new Error('The file server stopped answering in pieces. Try again.');
       await parts.put(key(i), new Response(got.blob)).catch(function (err) {
         throw new Error(/quota/i.test(String(err && (err.name + err.message))) ? 'There is not enough storage space on this device for the voice.' : String(err && err.message || err));
       });
-      done += got.blob.size; DL.done = done;
+      done += got.blob.size; DL.done = base + done;
     }
     // Join the pieces into the engine's file, streaming them in order and
     // letting each go once it is in — so the device never holds the model
@@ -4748,17 +4870,26 @@
       await tc.delete(url).catch(function () {});
       throw new Error(/quota/i.test(String(err && (err.name + err.message))) ? 'There is not enough storage space on this device for the voice.' : 'Saving the voice failed. Try again — it will carry on from where it stopped.');
     }
-    await caches.delete(PARTS_CACHE);
   }
   // a server that will not send pieces: one stream, as before (not resumable)
-  async function downloadWhole(v, res) {
-    var total = +res.headers.get('content-length') || 0, reader = res.body.getReader(), chunks = [], got = 0;
-    DL.total = total;
-    for (;;) { var r = await reader.read(); if (r.done) break; chunks.push(r.value); got += r.value.length; DL.done = got; renderVoiceStatus(); }
-    var whole = new Blob(chunks, { type: 'application/octet-stream' });
-    if (total && whole.size !== total) throw new Error('The download was cut short. Try again.');
-    await (await caches.open('transformers-cache')).put(modelUrl(v), new Response(whole,
-      { headers: { 'Content-Type': 'application/octet-stream', 'Content-Length': String(whole.size) } }));
+  // v35: streamed straight into the cache, never gathered into one blob in
+  // memory (WebKit could not read back a 132 MB one)
+  async function downloadWhole(url, res, base, totalAll) {
+    var total = +res.headers.get('content-length') || 0, reader = res.body.getReader(), got = 0;
+    DL.total = totalAll || total; base = base || 0;
+    var body = new ReadableStream({
+      pull: function (ctl) {
+        return reader.read().then(function (r) {
+          if (r.done) { ctl.close(); return; }
+          got += r.value.length; DL.done = base + got; renderVoiceStatus();
+          ctl.enqueue(r.value);
+        });
+      },
+      cancel: function () { try { reader.cancel(); } catch (e) {} }
+    });
+    var tc = await caches.open('transformers-cache');
+    await tc.put(url, new Response(body, { headers: { 'Content-Type': 'application/octet-stream' } }));
+    if (total && got !== total) { await tc.delete(url).catch(function () {}); throw new Error('The download was cut short. Try again.'); }
   }
   // The explicit step: download build v (if it is not here already), then load it.
   // An upgrade (8-bit → full) downloads beside the working voice, which keeps
@@ -4775,7 +4906,7 @@
       DL.active = false; DL.upgrade = false;
       lsSet('readfast:voice:variant', v);
       lsSet('readfast:voice:ready', '1');
-      lsSet('readfast:voice:toobig', null);
+      lsSet('readfast:voice:toobig', null); lsSet('readfast:voice:newphone', null);
       if (!R.playing && !L.speaking) letScreenSleep();
       if (upgrade) { if (L.speaking) listenPause(); unloadNatural(); }
       N.state = 'idle';
@@ -4801,8 +4932,8 @@
   // after a build has proved itself here, the other one is only taking space
   function dropOtherBuild(v) {
     if (!window.caches) return;
-    var other = v === 'full' ? 'standard' : 'full';
-    caches.open('transformers-cache').then(function (c) { return c.delete(modelUrl(other)); }).catch(function () {});
+    var others = v === 'phone' ? ['standard', 'full'] : [v === 'full' ? 'standard' : 'full'];
+    caches.open('transformers-cache').then(function (c) { return Promise.all(others.map(function (o) { return c.delete(modelUrl(o)); })); }).catch(function () {});
   }
   function settleWaiters(err) {
     var w = N.waiters; N.waiters = [];
@@ -4832,7 +4963,7 @@
       armStall(LOAD_STALL_MS);
       if (m.file === 'engine') setStage('model');
       else if (m.file === 'warm') setStage('warm');
-      else if (m.total && /\.onnx$/.test(m.file)) {
+      else if (m.total && /\.onnx(_data)?$/.test(m.file)) {
         N.pct = Math.min(99, Math.round(100 * m.loaded / m.total));
         if (m.loaded >= m.total) setStage('prepare'); else if (N.stage !== 'model') setStage('model');
         renderVoiceStatus();
@@ -5226,7 +5357,7 @@
     L.queue.push(c);
     L.nextStart = c.b;
     c.epoch = L.epoch;
-    c.voice = voicePrefs.natural; c.speed = voicePrefs.speed;
+    c.voice = natVoice(); c.speed = voicePrefs.speed;
     sendChunk(c);
   }
   function sendChunk(c) {
@@ -5234,7 +5365,7 @@
     N.inflight = c.id;
     guardOn();
     armGenTimer();
-    N.worker.postMessage({ type: 'gen', id: c.id, text: c.text, voice: c.voice, speed: c.speed });
+    N.worker.postMessage({ type: 'gen', id: c.id, text: c.text, voice: c.voice, speed: c.speed, steps: natSteps() });
   }
   // How much to have ready. On iPhone and iPad, with an engine that is well
   // ahead, up to ten minutes: with the screen off iOS may slow or pause the
@@ -5319,6 +5450,7 @@
     if (!(dur >= 0.4)) return;
     L.rtf.push(ms / 1000 / dur);
     if (L.rtf.length > 8) L.rtf.shift();
+    adaptSteps();
     try { localStorage.setItem(rtfKey(), median(L.rtf).toFixed(3)); } catch (e) {}
   }
   function clearCrashGuard() {
@@ -5419,7 +5551,7 @@
       c.src = null; c.t0 = c.t1 = 0;
     });
     L.playhead = 0;          // nothing is scheduled now; what is ready is counted by readyAhead()
-    L.kept = q.length ? { book: R.book, at: q[0].a, voice: voicePrefs.natural, speed: voicePrefs.speed } : null;
+    L.kept = q.length ? { book: R.book, at: q[0].a, voice: natVoice(), speed: voicePrefs.speed } : null;
     return L.kept ? L.kept.at : -1;
   }
   // Sitting in Listen mode, paused, with the engine loaded: make the first few
@@ -5432,11 +5564,11 @@
     L.prefetchTimer = setTimeout(function () {
       if (L.speaking || !L.on || !R.book || voicePrefs.engine !== 'natural' || N.state !== 'ready' || R.idx >= R.words.length) return;
       var at = R.rewindArmed ? resumePoint(R.idx) : R.idx;
-      if (!(L.kept && L.kept.book === R.book && L.kept.at === at && L.kept.voice === voicePrefs.natural &&
+      if (!(L.kept && L.kept.book === R.book && L.kept.at === at && L.kept.voice === natVoice() &&
             L.kept.speed === voicePrefs.speed && L.queue.length && L.queue[0].a === at)) {
         dropPrepared();
         L.nextStart = at; L.started = false;
-        L.kept = { book: R.book, at: at, voice: voicePrefs.natural, speed: voicePrefs.speed };
+        L.kept = { book: R.book, at: at, voice: natVoice(), speed: voicePrefs.speed };
       }
       pumpNatural();
     }, 500);
@@ -5477,13 +5609,13 @@
     L.playhead = 0; L.current = null;
     R.idx = list[k].a; R.rewindArmed = false;
     if (L.speaking) { L.waiting = true; schedule(); }
-    else L.kept = { book: R.book, at: R.idx, voice: voicePrefs.natural, speed: voicePrefs.speed };
+    else L.kept = { book: R.book, at: R.idx, voice: natVoice(), speed: voicePrefs.speed };
     showWord(); updateHUD(); saveProgress(true);
     return true;
   }
   function canResumeKept() {
     var k = L.kept;
-    return !!(k && k.book === R.book && k.at === R.idx && k.voice === voicePrefs.natural && k.speed === voicePrefs.speed &&
+    return !!(k && k.book === R.book && k.at === R.idx && k.voice === natVoice() && k.speed === voicePrefs.speed &&
               L.queue.length && L.queue[0].a === R.idx);
   }
 
@@ -5772,7 +5904,8 @@
       var v = pickDeviceVoice();
       return v ? v.name.replace(/\s*\(.*\)\s*$/, '') : 'Device voice';
     }
-    for (var i = 0; i < NATURAL_VOICES.length; i++) if (NATURAL_VOICES[i].id === voicePrefs.natural) return NATURAL_VOICES[i].name;
+    var vs = natVoices(), cv = natVoice();
+    for (var i = 0; i < vs.length; i++) if (vs[i].id === cv) return vs[i].name;
     return 'Choose a voice';
   }
 
@@ -5808,7 +5941,9 @@
     else if (VOICE_CRASHED && N.state !== 'ready') st = 'It stopped before it finished loading last time — the app was closed, or this device ran out of memory.';
     else if (N.state === 'ready' || naturalWasReady()) st = 'Downloaded — works offline';
     // v32: the phone that had v31's full build, which it could not hold
-    else if (PHONE && lsGet('readfast:voice:toobig') === '1') st = 'The full-quality voice was too big for this phone\u2019s memory — that is what closed Read Fast. It has been removed, freeing 326 MB. The phone voice is a one-time download of about ' + VARIANTS.standard.mb + ' MB.';
+    else if (PHONE && lsGet('readfast:voice:toobig') === '1') st = 'The full-quality voice was too big for this phone\u2019s memory — that is what closed Read Fast. It has been removed, freeing 326 MB. The phone voice is a one-time download of about ' + VARIANTS.phone.mb + ' MB.';
+    // v35: the phone that had Kokoro's 8-bit build
+    else if (PHONE && lsGet('readfast:voice:newphone') === '1') st = 'A new natural voice made for phones: it starts in seconds and makes speech faster than it speaks, so it reads without stopping. The old one could not keep up on this phone and has been removed. One-time download of about ' + VARIANTS.phone.mb + ' MB, then works offline.';
     else st = 'One-time download of about ' + VARIANTS[wantedVariant()].mb + ' MB, then works offline.';
     el.engNaturalStatus.textContent = st;
     var busy = N.state === 'downloading';
@@ -5831,7 +5966,8 @@
     el.voiceList.innerHTML = '';
     var items = [];
     if (panelEngine === 'natural') {
-      items = NATURAL_VOICES.map(function (v, i) { return { key: v.id, name: v.name, note: v.note + (i === 0 ? ' · the most natural' : ''), on: v.id === voicePrefs.natural }; });
+      var kok = natEngine() !== 'supertonic', cv = natVoice();
+      items = natVoices().map(function (v, i) { return { key: v.id, name: v.name, note: v.note + (kok && i === 0 ? ' · the most natural' : ''), on: v.id === cv }; });
     } else {
       var cur = pickDeviceVoice();
       items = deviceVoices().slice(0, 12).map(function (v) {
@@ -5848,7 +5984,8 @@
       var nt = document.createElement('span'); nt.textContent = it.note;
       b.appendChild(nm); b.appendChild(nt);
       b.addEventListener('click', function () {
-        if (panelEngine === 'natural') voicePrefs.natural = it.key; else voicePrefs.device = it.key;
+        if (panelEngine === 'natural') { if (natEngine() === 'supertonic') voicePrefs.phone = it.key; else voicePrefs.natural = it.key; }
+        else voicePrefs.device = it.key;
         saveVoicePrefs();
         renderVoicePanel();
         updateHUD();
@@ -5980,7 +6117,7 @@
       N.inflight = PREVIEW.id;
       clearTimeout(N.genTimer);
       N.genTimer = setTimeout(function () { naturalFail('This device took too long to prepare the preview.'); }, GEN_LIMIT_MS);
-      N.worker.postMessage({ type: 'gen', id: PREVIEW.id, text: PREVIEW_TEXT, voice: voicePrefs.natural, speed: voicePrefs.speed });
+      N.worker.postMessage({ type: 'gen', id: PREVIEW.id, text: PREVIEW_TEXT, voice: natVoice(), speed: voicePrefs.speed, steps: natSteps() });
     }, function () { PREVIEW.playing = false; renderVoicePanel(); });
   }
   function playPreviewAudio(m) {
@@ -6019,7 +6156,7 @@
     N.state = 'idle'; N.pct = 0; N.error = '';
     try {
       ['readfast:voice:ready', 'readfast:voice:loading', 'readfast:voice:crashed', 'readfast:voice:onecore',
-       'readfast:voice:variant', 'readfast:voice:gpu', 'readfast:voice:fulloff', 'readfast:voice:toobig'].forEach(function (k) { localStorage.removeItem(k); });
+       'readfast:voice:variant', 'readfast:voice:gpu', 'readfast:voice:fulloff', 'readfast:voice:toobig', 'readfast:voice:newphone', 'readfast:voice:steps'].forEach(function (k) { localStorage.removeItem(k); });
       Object.keys(localStorage).forEach(function (k) { if (k.indexOf('readfast:voice:rtf') === 0) localStorage.removeItem(k); });
     } catch (e) {}
     L.rtf = []; VOICE_ONE_CORE = false;

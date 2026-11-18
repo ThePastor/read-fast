@@ -1,6 +1,6 @@
 # Read Fast — Terms of Use
 
-**Effective 17 November 2026 · applies to https://thepastor.github.io/read-fast/**
+**Effective 18 November 2026 · applies to https://thepastor.github.io/read-fast/**
 
 © 2026 JohnsonX Labs. All rights reserved. Read Fast is proprietary software — see [LICENSE](./LICENSE).
 
@@ -42,7 +42,7 @@ Four destinations always, and three more only if you choose to download the natu
 | # | What | Where it goes | What is sent | After the first time |
 |---|---|---|---|---|
 | 5 | The voice engine and its WebAssembly runtime (about 24 MB) | `cdn.jsdelivr.net` (jsDelivr) | Your IP address, User-Agent and referring page — the standard information any server receives | Kept in your browser's cache; no further request |
-| 6 | The voice model and the voice you pick (about 93 MB, or 326 MB for the full-quality build offered to computers; phones and tablets always get the smaller one) | `huggingface.co` (Hugging Face) | Same as #5 | Kept in your browser's cache; no further request |
+| 6 | The voice model and its voices — on computers Kokoro (about 93 MB, or 326 MB for the full-quality build); on phones and tablets Supertonic 2 (about 263 MB) | `huggingface.co` (Hugging Face) | Same as #5 | Kept in your browser's cache; no further request |
 | 7 | The same files — Hugging Face hands the download to its file CDN | `*.cdn.hf.co`, e.g. `us.aws.cdn.hf.co` (Hugging Face) | Same as #5 | As #6 |
 
 These are downloads of public files that are the same for everyone. **The text of your book is never sent to any of them** — the voice runs on your device, after the download.
@@ -58,8 +58,8 @@ Destinations 3 and 4 mean Google's servers see that a browser at your IP address
 Read Fast sets **no cookies**. It uses:
 
 - **IndexedDB** — your books, their text, your reading position and your reading statistics.
-- **Cache Storage** — the app itself and the two fonts, so it works offline; and, if you download it, the natural voice (about 117 MB, or about 350 MB for the full-quality build). While it downloads, the pieces that have arrived are kept so an interrupted download can carry on; they are removed when it finishes. The Listen panel has a button that removes the voice and gives the space back.
-- **Local storage** — a few small settings: your reading pace, whether Listen is on, the voice and voice speed you chose, which build of the voice this device has and whether it runs on the graphics chip or the processor, and how fast this device makes speech (so the voice can plan ahead). *(Earlier versions of these terms left this out. Read Fast has always kept your reading pace this way; the omission was ours.)*
+- **Cache Storage** — the app itself and the two fonts, so it works offline; and, if you download it, the natural voice (on computers about 117 MB, or about 350 MB for the full-quality build; on phones and tablets about 286 MB). While it downloads, the pieces that have arrived are kept so an interrupted download can carry on; they are removed when it finishes. The Listen panel has a button that removes the voice and gives the space back.
+- **Local storage** — a few small settings: your reading pace, whether Listen is on, the voice and voice speed you chose, which build of the voice this device has and whether it runs on the graphics chip or the processor, how fast this device makes speech (so the voice can plan ahead), and on phones how much refining the voice does so it keeps up. *(Earlier versions of these terms left this out. Read Fast has always kept your reading pace this way; the omission was ours.)*
 
 All of it is on your device and is cleared when you clear your browser's site data for this address. Clearing it deletes your library permanently. **Use "Back up library" if that would matter to you.**
 
@@ -81,7 +81,7 @@ Read Fast is hosted on GitHub Pages, a free service. It may be unavailable, slow
 
 ## 8. Third-party components
 
-Read Fast bundles PDF.js, core-js and fflate, and loads two open-licensed typefaces. If you download the natural voice, it also loads the Kokoro speech model and the software that runs it. All of these are used under their own licences and remain their authors' property. See [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md).
+Read Fast bundles PDF.js, core-js and fflate, and loads two open-licensed typefaces. If you download the natural voice, it also loads a speech model — Kokoro on computers, Supertonic on phones and tablets — and the software that runs it. All of these are used under their own licences and remain their authors' property. See [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md).
 
 ## 9. No warranty, and limits on liability
 

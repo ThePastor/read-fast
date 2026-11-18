@@ -11,8 +11,8 @@ not.
 Nothing in Read Fast's own proprietary licence restricts your rights under the
 licences below, with respect to the components they cover.
 
-Last verified against the shipped build: **v34, 18 November 2026**
-(`index.html`, SHA-256 `89b2509b286021b4cb9e1de9f5bd43ea7a0ca34d24733e2404c368a643aa36e7`)
+Last verified against the shipped build: **v35, 18 November 2026**
+(`index.html`, SHA-256 `9010d0db16704a8d529eb81837b8d61264a311322338be14b1b3d7665b756d82`)
 
 ---
 
@@ -39,7 +39,24 @@ redistribute any of them.
 | [Transformers.js](https://github.com/huggingface/transformers.js) (`@huggingface/transformers`) | 3.5.1 | Apache-2.0 | Inside `kokoro.web.js`; its WebAssembly runtime from `cdn.jsdelivr.net` | Hugging Face |
 | [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) | 1.21.0 | MIT | Inside Transformers.js, plus `ort-wasm-simd-threaded.jsep.wasm` | Microsoft Corporation |
 | [phonemizer](https://github.com/xenova/phonemizer.js) | 1.2.1 | Apache-2.0 **as published** — see below | Inside `kokoro.web.js` | Joshua Lochner (xenova) |
+| [Supertonic 2](https://huggingface.co/Supertone/supertonic-2) — the phone voice (v35): speech model and its ten voices, ONNX export | 2 | **BigScience OpenRAIL-M** — see below | Downloaded at runtime, on phones and tablets only, from [huggingface.co/onnx-community/Supertonic-TTS-2-ONNX](https://huggingface.co/onnx-community/Supertonic-TTS-2-ONNX) | Supertone Inc.; ONNX export by the onnx-community |
+| [Transformers.js](https://github.com/huggingface/transformers.js) (`@huggingface/transformers`), for the phone voice | 3.8.1 | Apache-2.0 | Loaded at runtime from `cdn.jsdelivr.net` (`transformers.min.js`); it uses the same WebAssembly runtime file as the row above | Hugging Face |
 | ↳ [eSpeak NG](https://github.com/espeak-ng/espeak-ng), compiled to WebAssembly inside phonemizer | — | **GPL-3.0-or-later** upstream | Inside phonemizer | The eSpeak NG authors — source at https://github.com/espeak-ng/espeak-ng |
+
+### The phone voice's licence — OpenRAIL-M, stated plainly
+
+Supertonic 2's weights are licensed by Supertone Inc. under the BigScience
+**OpenRAIL-M** licence: free to use, including commercially, subject to
+*use-based restrictions* (its Attachment A — among them: nothing unlawful,
+nothing that exploits or harms minors, no impersonating people without their
+consent, no discrimination, and content the model makes must be disclosed as
+machine-made; the Listen panel names it an AI voice).
+Read Fast uses it for exactly one thing: reading the reader's own book aloud,
+on the reader's own device. It does not copy, host or redistribute the model —
+the reader's browser downloads it unmodified from Hugging Face — and it adds no
+restrictions of its own. The licence travels with the model on its Hugging Face
+page. Supertonic needs no phonemizer, so **the GPL question below does not
+arise for the phone voice.**
 
 ### The voice, and the GPL question — stated plainly
 

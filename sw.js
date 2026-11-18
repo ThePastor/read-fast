@@ -9,7 +9,7 @@
  * previous cache in activate(). The page is told when a new worker is waiting
  * and offers a Reload, rather than swapping the app out underneath the reader.
  */
-var VERSION = 'v34';
+var VERSION = 'v35';
 var CACHE = 'read-fast-' + VERSION;
 var DOC = new URL('./', self.location).href;
 var SHELL = [
@@ -47,7 +47,8 @@ var VOICE_CACHE = 'readfast-voice-engine-1';
 function isVoiceEngine(u) {
   return u.hostname === 'cdn.jsdelivr.net' &&
     (u.pathname.indexOf('/npm/kokoro-js@1.2.1/') === 0 ||
-     u.pathname.indexOf('/npm/@huggingface/transformers@3.5.1/') === 0);
+     u.pathname.indexOf('/npm/@huggingface/transformers@3.5.1/') === 0 ||
+     u.pathname.indexOf('/npm/@huggingface/transformers@3.8.1/') === 0);   // v35: the phone voice's engine
 }
 
 self.addEventListener('fetch', function (e) {
